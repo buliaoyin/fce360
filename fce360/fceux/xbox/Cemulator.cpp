@@ -781,6 +781,7 @@ void FrameLimit()
 }
 //to move
 
+unsigned int * nesBitmap;
 
 HRESULT Cemulator::Run()
 {
@@ -820,7 +821,7 @@ HRESULT Cemulator::Run()
 	if(true)
 	{
 		//move to update ...
-		unsigned int nesBitmap[256*240];
+		nesBitmap = (unsigned int *)malloc(256 * 240 * sizeof(unsigned int));
 		int32 * snd;
 		int32 sndsize;
 		
