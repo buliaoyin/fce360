@@ -208,10 +208,10 @@ public:
 		
 		hr = GetChildById( L"XuiLoadGame", &XuiLoadGame );
         if( FAILED( hr ) ){	return hr;	}
-
+#if 0
 		hr = GetChildById( L"XuiSlotSelector", &XuiSlotSelector );
         if( FAILED( hr ) ){	return hr;	}
-#if 0
+
 		//
 		hr = GetChildById( L"XuiNormal", &XuiNormal );
         if( FAILED( hr ) ){	return hr;	}

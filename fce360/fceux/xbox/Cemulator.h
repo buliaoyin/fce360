@@ -117,6 +117,40 @@ private:
 	};
 	XAudio2_BufferNotify XAudio2_Notifier; //XAudio2 event notifier
 
+	class FrameSkip
+	{
+	public:
+		LARGE_INTEGER ts_old;
+		LARGE_INTEGER ts_new;
+		DOUBLE ms_sec;
+		int target_fps;
+
+		FrameSkip(){
+			ts_old;
+			ts_new;
+			ms_sec;
+			LARGE_INTEGER ts_frequency;
+
+			target_fps = 16666; //16.66 ms
+			
+			QueryPerformanceFrequency(&ts_frequency);
+			QueryPerformanceCounter(&ts_old);
+			QueryPerformanceCounter(&ts_new);
+			ms_sec = ts_frequency.QuadPart* 0.000001;
+		};
+
+		void Wait()
+		{
+			QueryPerformanceCounter(&ts_new);
+			while(((ts_new.QuadPart - ts_old.QuadPart)/ms_sec)<target_fps)
+			{
+				QueryPerformanceCounter(&ts_new);
+			}
+			ts_old = ts_new;
+		};
+	};
+	FrameSkip fskip;
+
 	enum __gfxfilter{
 		gfx_normal,
 		gfx_hq2x,
@@ -174,6 +208,8 @@ private:
 			data = ((unsigned int*) texture_info.pBits);
 
 			g_texture->UnlockRect(0);
+
+			return S_OK;
 		}
 
 	public:
