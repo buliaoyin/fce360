@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Xaudio2.h>
-
+#include "filter/vfilter.h"
 #ifdef _XBOX
 HRESULT InitUi(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS d3dpp);
 HRESULT RenderXui(IDirect3DDevice9* pDevice);
@@ -96,7 +96,6 @@ private:
 		XAudio2_BufferNotify() {
 			hBufferEndEvent = NULL;
 			hBufferEndEvent = CreateEvent( NULL, FALSE, FALSE, NULL );
-			//ASSERT( hBufferEndEvent != NULL );
 		}
 
 		~XAudio2_BufferNotify() {
@@ -106,9 +105,7 @@ private:
 
 		STDMETHOD_( void, OnBufferEnd ) ( void *pBufferContext ) {
 			//ASSERT( hBufferEndEvent != NULL );
-			SetEvent( hBufferEndEvent );
 		}
-
 
 		// dummies:
 		STDMETHOD_( void, OnVoiceProcessingPassStart ) ( UINT32 BytesRequired ) {}
@@ -118,12 +115,139 @@ private:
 		STDMETHOD_( void, OnLoopEnd ) ( void *pBufferContext ) {}
 		STDMETHOD_( void, OnVoiceError ) ( void *pBufferContext, HRESULT Error ) {};
 	};
+	XAudio2_BufferNotify XAudio2_Notifier; //XAudio2 event notifier
 
-	XAudio2_BufferNotify    notify; // buffer end notification
+	enum __gfxfilter{
+		gfx_normal,
+		gfx_hq2x,
+		gfx_hq3x,
+		gfx_2xsai,
+		gfx_super2sai,
+		gfx_superEagle
+	};
+
+	class GfxFilter
+	{
+	private:
+		// base w/h
+		DWORD32 BaseW;
+		DWORD32 BaseH;
+		
+		// current w/h
+		DWORD32 CurrW;
+		DWORD32 CurrH;
+
+		// texture a applique le filtre
+		LPDIRECT3DTEXTURE9 mtext; 
+		// bit de la texture
+		unsigned int * data;
+		DWORD pitch;
+
+		// filtre utilisé en cours
+		DWORD32 selFilter;
+
+		HRESULT CreateTexture()
+		{
+			extern LPDIRECT3DDEVICE9 g_pd3dDevice;
+			extern IDirect3DTexture9 * g_texture;
+			HRESULT hr = D3DXCreateTexture(
+				g_pd3dDevice, CurrW,
+				CurrH, D3DX_DEFAULT, 0, D3DFMT_LIN_A8R8G8B8, D3DPOOL_MANAGED,
+				&g_texture
+			);
+
+			if(FAILED(hr))
+				return hr;
+
+			RECT d3dr;
+
+			d3dr.left=0;
+			d3dr.top=0;
+			d3dr.right=CurrW;
+			d3dr.bottom=CurrH;
+
+			D3DLOCKED_RECT texture_info;
+			
+			g_texture->LockRect( 0,  &texture_info, &d3dr, NULL );
+
+			pitch = (DWORD) texture_info.Pitch;
+			data = ((unsigned int*) texture_info.pBits);
+
+			g_texture->UnlockRect(0);
+		}
+
+	public:
+		GfxFilter(){
+			selFilter = gfx_hq2x;
+		};
+
+		void SetTextureDimension(DWORD32 width, DWORD32 height)
+		{
+			BaseW = width;
+			BaseH = height;
+		}
+		
+		void UpdateFilter(unsigned int * bitmap){
+			switch (selFilter)
+			{	
+				case gfx_hq2x:
+					filter_hq2x_32((unsigned char *)bitmap, BaseW<<2, (unsigned char *)data, BaseW, BaseH);
+					break;
+				case gfx_hq3x:
+					filter_hq3x_32((unsigned char *)bitmap, BaseW<<2, (unsigned char *)data, BaseW, BaseH);
+					break;
+				case gfx_2xsai:
+					filter_Std2xSaI_ex8((unsigned char *)bitmap, BaseW<<2, (unsigned char *)data, BaseW, BaseH);
+					break;
+				case gfx_super2sai:
+					filter_Super2xSaI_ex8((unsigned char *)bitmap, BaseW<<2, (unsigned char *)data, BaseW, BaseH);
+					break;
+				case gfx_superEagle:
+					filter_SuperEagle_ex8((unsigned char *)bitmap, BaseW<<2, (unsigned char *)data, BaseW, BaseH);
+					break;
+				default:
+					memcpy(data,bitmap, (BaseW * BaseH * 4) );
+					break;
+			}	
+			
+		}
+		
+		void UseFilter(unsigned int filter){
+			if(filter != selFilter){
+				selFilter = filter;
+				switch(filter){
+					case gfx_normal:
+					{
+						CurrH = BaseH;
+						CurrW = BaseW;
+						break;
+					}
+					case gfx_hq2x:
+					case gfx_2xsai:
+					case gfx_super2sai:
+					case gfx_superEagle:
+					{
+						CurrH = BaseH*2;
+						CurrW = BaseW*2;
+						break;
+					}
+					case gfx_hq3x:
+					{
+						CurrH = BaseH*3;
+						CurrW = BaseW*3;
+						break;
+					}
+				};
+			
+				CreateTexture();
+			}
+		};
+	};
+	GfxFilter gfx_filter;
 public:
 	Cemulator(void);
 
-	//render sms or ui
+	//render emu or ui
 	bool RenderEmulation;
 
 	//PC SIDE

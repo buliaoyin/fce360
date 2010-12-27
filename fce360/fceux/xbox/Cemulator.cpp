@@ -437,7 +437,7 @@ HRESULT Cemulator::InitAudio()
 //-------------------------------------------------------------------------------------
 //	Csv
 //-------------------------------------------------------------------------------------
-	if(FAILED( g_pXAudio2->CreateSourceVoice(&g_pSourceVoice,(WAVEFORMATEX*)&wfx,0, 1.0f, &notify)	))
+	if(FAILED( g_pXAudio2->CreateSourceVoice(&g_pSourceVoice,(WAVEFORMATEX*)&wfx, XAUDIO2_VOICE_NOSRC, 1.0f, &XAudio2_Notifier)	))
 	{
 		printf("CreateSourceVoice failed\n");
 		return E_FAIL;
@@ -451,6 +451,18 @@ HRESULT Cemulator::InitAudio()
 		printf("g_pSourceVoice failed\n");
 		return E_FAIL;
 	}
+
+	//Sound ...
+	int len = 800;
+	int16 * null_sound = (int16 *)malloc(len);
+	ZeroMemory(null_sound,len);
+
+	XAUDIO2_BUFFER buf = {0};
+	buf.AudioBytes = len;
+    buf.pContext=null_sound;
+    buf.pAudioData=(BYTE*)buf.pContext;
+    g_pSourceVoice->SubmitSourceBuffer( &buf );
+
 	return S_OK;
 
 };
@@ -471,7 +483,7 @@ void Cemulator::UpdateAudio(int * snd, int sndsize)
 		}
 		else
 		{
-			WaitForSingleObject( notify.hBufferEndEvent, INFINITE );
+			WaitForSingleObject( XAudio2_Notifier.hBufferEndEvent, INFINITE );
 		}
 	}
 
@@ -585,46 +597,12 @@ HRESULT Cemulator::InitSystem()
 //-------------------------------------------------------------------------------------
 // Set up rendering texture
 //-------------------------------------------------------------------------------------
-	RECT d3dr;
-
-	d3dr.left=0;
-	d3dr.top=0;
-	d3dr.right=GetWidth();
-	d3dr.bottom=GetHeight();
-
-	D3DLOCKED_RECT texture_info;
-	g_texture->LockRect( 0,  &texture_info, &d3dr, NULL );
-
-//-------------------------------------------------------------------------------------
-// Set up bitmap structure
-//-------------------------------------------------------------------------------------
-   
-
-	g_texture->UnlockRect(0);
-
 //-------------------------------------------------------------------------------------
 // Set up sound
 //-------------------------------------------------------------------------------------
-#if 0
-	snd.fm_which = SND_EMU2413;
-    snd.fps = (1) ? FPS_NTSC : FPS_PAL;
-    snd.fm_clock = (1) ? CLOCK_NTSC : CLOCK_PAL;
-    snd.psg_clock = (1) ? CLOCK_NTSC : CLOCK_PAL;
-	snd.sample_rate = 44100;
-	sms.territory = 0;
-    sms.use_fm = 1;
-	//sms.save=1;
-#endif
 //-------------------------------------------------------------------------------------
 // Load roms
 //-------------------------------------------------------------------------------------
-#ifndef _XBOX
-	if(FAILED(LoadGame((char*)defaut_rom.c_str(),false)))
-	{
-		return E_FAIL;
-	}
-#endif
-	return S_OK;
 //-------------------------------------------------------------------------------------
 // Start system
 //-------------------------------------------------------------------------------------
@@ -637,12 +615,10 @@ HRESULT Cemulator::LoadGame(std::string name, bool restart)
 //-------------------------------------------------------------------------------------
 // Load roms
 //-------------------------------------------------------------------------------------
-
 	FCEUI_SetBaseDirectory("game:");
 	FCEUI_SetVidSystem(0);
 	if(FCEUI_LoadGame(name.c_str() ,0)!=NULL)
 	{
-		
 		FCEUI_SetInput(0, SI_GAMEPAD, (void*)&powerpadbuf[0], 0);
 		FCEUI_SetInput(1, SI_GAMEPAD, (void*)&powerpadbuf[1], 0);
 
@@ -808,7 +784,6 @@ void FrameLimit()
 
 HRESULT Cemulator::Run()
 {
-	//FrameLimitInit();
 //-------------------------------------------------------------------------------------
 // Lance l'application
 //-------------------------------------------------------------------------------------	
@@ -827,34 +802,15 @@ HRESULT Cemulator::Run()
 		printf("InitInput failed\n");
 		return E_FAIL;
 	}
-#if 0
 	if(FAILED( InitSystem()	))
 	{
 		printf("InitSystem failed\n");
 		return E_FAIL;
 	}
-#endif
+
 	nesrom = (unsigned char *)memalign(32,1024*1024*4); // 4 MB should be plenty
 
 	FCEUI_Initialize();
-
-	RECT d3dr;
-
-	d3dr.left=0;
-	d3dr.top=0;
-	d3dr.right=GetWidth();
-	d3dr.bottom=GetHeight();
-
-	D3DLOCKED_RECT texture_info;
-	
-	DWORD pitch;
-
-	g_texture->LockRect( 0,  &texture_info, &d3dr, NULL );
-
-	pitch = (DWORD) texture_info.Pitch;
-	unsigned int * data = ((unsigned int*) texture_info.pBits);
-
-	g_texture->UnlockRect(0);
 
 	InitUi(g_pd3dDevice, g_d3dpp);
 
@@ -864,24 +820,25 @@ HRESULT Cemulator::Run()
 	if(true)
 	{
 		//move to update ...
+		unsigned int nesBitmap[256*240];
 		int32 * snd;
 		int32 sndsize;
+		
+		gfx_filter.SetTextureDimension(GetWidth(), GetHeight());
+		gfx_filter.UseFilter( gfx_hq3x );
 
-		unsigned int nesBitmap[256*240];
 		while(end==false)
 		{
 			if(RenderEmulation == true)
 			{
-
 				FCEUI_Emulate(&bitmap, &snd, &sndsize, 0);
 				for(int i = 0;i<(256*240);i++)
 				{
 					//Make an ARGB bitmap
-					data[i] = ( (pcpalette[bitmap[i]].r) << 16) | ( (pcpalette[bitmap[i]].g) << 8 ) | ( pcpalette[bitmap[i]].b ) | ( 0xFF << 24 );
+					nesBitmap[i] = ( (pcpalette[bitmap[i]].r) << 16) | ( (pcpalette[bitmap[i]].g) << 8 ) | ( pcpalette[bitmap[i]].b ) | ( 0xFF << 24 );
 				}
-
-				//applique un filtre sur l'image
-				//hq3x_32(nesBitmap, data, 256, 240);
+				
+				gfx_filter.UpdateFilter(nesBitmap);
 
 				UpdateAudio(snd, sndsize);
 				UpdateInput();
