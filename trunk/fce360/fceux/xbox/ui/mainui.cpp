@@ -151,6 +151,16 @@ private:
 	CXuiCheckbox XuiTv;
 	CXuiCheckbox XuiFullscren;
 
+	CXuiList XuiSlotSelector;
+
+	typedef struct s_save_item{
+		std::string filename;
+		std::wstring affichage;
+		std::wstring snapshot;
+	} save_item;
+
+	//list des roms
+	std::vector<save_item> m_save_list;
 public:
 	XUI_IMPLEMENT_CLASS( Osd, L"Osd", XUI_CLASS_SCENE );
 
@@ -198,6 +208,9 @@ public:
 		
 		hr = GetChildById( L"XuiLoadGame", &XuiLoadGame );
         if( FAILED( hr ) ){	return hr;	}
+
+		hr = GetChildById( L"XuiSlotSelector", &XuiSlotSelector );
+        if( FAILED( hr ) ){	return hr;	}
 #if 0
 		//
 		hr = GetChildById( L"XuiNormal", &XuiNormal );
@@ -220,6 +233,56 @@ public:
 #endif
         return S_OK;
     }
+
+	bool FileExiste(char * filename){
+		HANDLE hFile = CreateFileA(filename,               // file to open
+           GENERIC_READ,          // open for reading
+           FILE_SHARE_READ,       // share for reading
+           NULL,                  // default security
+           OPEN_EXISTING,         // existing file only
+           FILE_ATTRIBUTE_NORMAL, // normal file
+           NULL);                 // no attr. template
+
+		bool ret = (hFile != NULL);
+
+		CloseHandle(hFile);
+
+		return ret;
+	};
+
+	void ScanSlot(){
+		//scan for 10 slot
+		extern FCEUGI * GameInfo;
+		//compute the md5 of file to a string
+		char state_name[512];
+		char rom_name[512];
+
+		strcpy(rom_name,"");
+		for(int x=0;x<16;x++)
+			sprintf(rom_name, "%s%02x",rom_name,GameInfo->MD5[x]);
+	
+		int nbslot = 0;
+		for(int i = 0;i<10;i++){
+			sprintf(state_name, "game:\\states\\%s-%d.sav",rom_name,i);
+			if(FileExiste(state_name)==false)
+			{
+				save_item item;
+				item.affichage=L"";
+				item.filename = state_name;
+				//item.s
+				m_save_list.push_back(item);
+				nbslot = i;
+				break;
+			}
+		}
+			
+		XuiSlotSelector.InsertItems(0, nbslot);
+		for(int j=0;j<nbslot;j++)
+		{
+			XuiSlotSelector.SetText(j,L"test");
+			XuiSlotSelector.SetImage(j,L"test");
+		}
+	};
 
 	void SwFilter()
 	{
