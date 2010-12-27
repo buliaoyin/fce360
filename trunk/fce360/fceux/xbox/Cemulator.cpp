@@ -59,9 +59,10 @@ D3DXMATRIX g_matWorldViewProjection;
 // Audio
 //-------------------------------------------------------------------------------------
 #define SOUND_SAMPLES_SIZE  2048
+#define SOUND_BUFFER_SIZE 5000
 
-uint8 * bitmap;// = (uint8*)malloc(256*256);
-int16 g_sound_buffer[48000];
+uint8 * bitmap;
+int16 * g_sound_buffer;
 
 IXAudio2* g_pXAudio2 = NULL;
 IXAudio2MasteringVoice* g_pMasteringVoice = NULL;
@@ -69,12 +70,15 @@ IXAudio2SourceVoice* g_pSourceVoice = NULL;
 WAVEFORMATEXTENSIBLE wfx;
 XAUDIO2_BUFFER g_SoundBuffer;
 
+//
+unsigned int * nesBitmap;
+float ftime=0.f;
 
 //-------------------------------------------------------------------------------------
 // Input
 //-------------------------------------------------------------------------------------
 //GAMEPAD* m_pGamepad;
-uint32 powerpadbuf[2]={0,0};
+uint32 powerpadbuf=0;
 
 //-------------------------------------------------------------------------------------
 // TEXTURE
@@ -384,9 +388,6 @@ void Cemulator::UpdateVideo(){
 
 HRESULT Cemulator::InitAudio()
 {
-	memset(g_sound_buffer,0,48000);
-
-	//return S_OK;
 //-------------------------------------------------------------------------------------
 // Initialise Audio
 //-------------------------------------------------------------------------------------	
@@ -396,6 +397,9 @@ HRESULT Cemulator::InitAudio()
         printf( "Failed to init XAudio2 engine: %#X\n", hr );
         return E_FAIL;
     }
+
+	g_sound_buffer = (int16 *)malloc(SOUND_BUFFER_SIZE * sizeof(int16));
+	memset(g_sound_buffer,0,SOUND_BUFFER_SIZE);
 
 //-------------------------------------------------------------------------------------
 // Create a mastering voice
@@ -411,18 +415,7 @@ HRESULT Cemulator::InitAudio()
 //-------------------------------------------------------------------------------------	
 	WAVEFORMATEXTENSIBLE wfx;
 	memset(&wfx, 0, sizeof(WAVEFORMATEXTENSIBLE));
-#if 0
-	wfx.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE;
-	wfx.Format.nSamplesPerSec       = 44100;
-	wfx.Format.nChannels            = 2;
-	wfx.Format.wBitsPerSample       = 16;
-	wfx.Format.nBlockAlign          = wfx.Format.nChannels*wfx.Format.wBitsPerSample/8;
-	wfx.Format.nAvgBytesPerSec      = 44100 * wfx.Format.nBlockAlign;
-	wfx.Format.cbSize               = sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WAVEFORMATEX);
-	wfx.Samples.wValidBitsPerSample = wfx.Format.wBitsPerSample;
-	wfx.dwChannelMask               = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
-	wfx.SubFormat                   = KSDATAFORMAT_SUBTYPE_PCM;
-#else
+	
 	wfx.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE ;
 	wfx.Format.nSamplesPerSec       = 48000;
 	wfx.Format.nChannels            = 1;
@@ -433,9 +426,9 @@ HRESULT Cemulator::InitAudio()
 	wfx.Samples.wValidBitsPerSample = wfx.Format.wBitsPerSample;
 	wfx.dwChannelMask               = SPEAKER_MONO;
 	wfx.SubFormat                   = KSDATAFORMAT_SUBTYPE_PCM;
-#endif
+
 //-------------------------------------------------------------------------------------
-//	Csv
+//	Source voice
 //-------------------------------------------------------------------------------------
 	if(FAILED( g_pXAudio2->CreateSourceVoice(&g_pSourceVoice,(WAVEFORMATEX*)&wfx, XAUDIO2_VOICE_NOSRC, 1.0f, &XAudio2_Notifier)	))
 	{
@@ -453,8 +446,8 @@ HRESULT Cemulator::InitAudio()
 	}
 
 	//Sound ...
-	int len = 800;
-	int16 * null_sound = (int16 *)malloc(len);
+	int len = SOUND_BUFFER_SIZE;
+	int16 * null_sound = (int16 *)malloc(SOUND_BUFFER_SIZE * sizeof(int16));
 	ZeroMemory(null_sound,len);
 
 	XAUDIO2_BUFFER buf = {0};
@@ -464,7 +457,6 @@ HRESULT Cemulator::InitAudio()
     g_pSourceVoice->SubmitSourceBuffer( &buf );
 
 	return S_OK;
-
 };
 
 void Cemulator::UpdateAudio(int * snd, int sndsize)
@@ -514,7 +506,6 @@ void Cemulator::UpdateAudio(int * snd, int sndsize)
 		return ;
 	}
 };
-
 
 HRESULT Cemulator::InitInput()
 {
@@ -587,9 +578,7 @@ void Cemulator::UpdateInput()
 
 	//JSReturn = pad[0] | pad[1] << 8 | pad[2] << 16 | pad[3] << 24;
 
-	//powerpadbuf[0] = pad[0] | pad[1] << 8 | pad[2] << 16 | pad[3] << 24;;
-	powerpadbuf[0] = pad[0];
-	powerpadbuf[1] = pad[1];
+	powerpadbuf = pad[0] | pad[1] << 8 ;//| pad[2] << 16 | pad[3] << 24;;
 };
 
 HRESULT Cemulator::InitSystem()
@@ -597,6 +586,7 @@ HRESULT Cemulator::InitSystem()
 //-------------------------------------------------------------------------------------
 // Set up rendering texture
 //-------------------------------------------------------------------------------------
+	nesBitmap = (unsigned int *)malloc(256 * 240 * sizeof(unsigned int));
 //-------------------------------------------------------------------------------------
 // Set up sound
 //-------------------------------------------------------------------------------------
@@ -619,10 +609,8 @@ HRESULT Cemulator::LoadGame(std::string name, bool restart)
 	FCEUI_SetVidSystem(0);
 	if(FCEUI_LoadGame(name.c_str() ,0)!=NULL)
 	{
-		FCEUI_SetInput(0, SI_GAMEPAD, (void*)&powerpadbuf[0], 0);
-		FCEUI_SetInput(1, SI_GAMEPAD, (void*)&powerpadbuf[1], 0);
-
-			//FCEUI_SetVidSystem(0);
+		FCEUI_SetInput(0, SI_GAMEPAD, (void*)&powerpadbuf, 0);
+		FCEUI_SetInput(1, SI_GAMEPAD, (void*)&powerpadbuf, 0);
 
 		//set to ntsc
 		extern FCEUGI * GameInfo;
@@ -638,8 +626,6 @@ HRESULT Cemulator::LoadGame(std::string name, bool restart)
 	
 	return E_FAIL;
 };
-
-float ftime=0.f;
 
 void Cemulator::Render()
 {
@@ -755,33 +741,6 @@ void Cemulator::Render()
 #endif
 };
 
-LARGE_INTEGER ts_old={0};
-LARGE_INTEGER ts_new={0};
-DOUBLE ms_sec={0};
-#define TARGET_FPS 16666 //16.66 ms
-
-void FrameLimitInit()
-{
-	LARGE_INTEGER ts_frequency={0};
-	QueryPerformanceFrequency(&ts_frequency);
-	QueryPerformanceCounter(&ts_old);
-	QueryPerformanceCounter(&ts_new);
-	ms_sec = ts_frequency.QuadPart* 0.000001;
-}
-
-void FrameLimit()
-{
-	QueryPerformanceCounter(&ts_new);
-	while(((ts_new.QuadPart - ts_old.QuadPart)/ms_sec)<TARGET_FPS)
-	{
-		QueryPerformanceCounter(&ts_new);
-		//Sleep(
-	}
-	ts_old = ts_new;
-}
-//to move
-
-unsigned int * nesBitmap;
 
 HRESULT Cemulator::Run()
 {
@@ -809,8 +768,6 @@ HRESULT Cemulator::Run()
 		return E_FAIL;
 	}
 
-	nesrom = (unsigned char *)memalign(32,1024*1024*4); // 4 MB should be plenty
-
 	FCEUI_Initialize();
 
 	InitUi(g_pd3dDevice, g_d3dpp);
@@ -820,8 +777,6 @@ HRESULT Cemulator::Run()
 //-------------------------------------------------------------------------------------	
 	if(true)
 	{
-		//move to update ...
-		nesBitmap = (unsigned int *)malloc(256 * 240 * sizeof(unsigned int));
 		int32 * snd;
 		int32 sndsize;
 		
@@ -844,14 +799,13 @@ HRESULT Cemulator::Run()
 				UpdateAudio(snd, sndsize);
 				UpdateInput();
 			}
-			
 			UpdateVideo();
 			Render();
 		}
 	}
 	CloseSystem();
 	CloseVideo();
-	//CloseAudio();
+	CloseAudio();
 	CloseInput();
 	return S_OK;
 };
@@ -890,67 +844,3 @@ HRESULT Cemulator::CloseSystem()
 	return S_OK;	
 };
 
-//-------------------------------------------------------------------------------------
-// ATG !!
-//-------------------------------------------------------------------------------------	
-
-//--------------------------------------------------------------------------------------
-// Name: LoadFile()
-// Desc: Helper function to load a file
-//--------------------------------------------------------------------------------------
-HRESULT LoadFile( const CHAR* strFileName, VOID** ppFileData, DWORD* pdwFileSize )
-{
-	//assert( ppFileData );
-    if( pdwFileSize )
-        *pdwFileSize = 0L;
-
-    // Open the file for reading
-    HANDLE hFile = CreateFileA( strFileName, GENERIC_READ, 0, NULL,
-                               OPEN_EXISTING, 0, NULL );
-
-    if( INVALID_HANDLE_VALUE == hFile )
-        return E_HANDLE;
-
-    DWORD dwFileSize = GetFileSize( hFile, NULL );
-    VOID* pFileData = malloc( dwFileSize );
-
-    if( NULL == pFileData )
-    {
-        CloseHandle( hFile );
-        return E_OUTOFMEMORY;
-    }
-
-    DWORD dwBytesRead;
-    if( !ReadFile( hFile, pFileData, dwFileSize, &dwBytesRead, NULL ) )
-    {
-        CloseHandle( hFile );
-        free( pFileData );
-        return E_FAIL;
-    }
-
-    // Finished reading file
-    CloseHandle( hFile );
-
-    if( dwBytesRead != dwFileSize )
-    {
-        free( pFileData );
-        return E_FAIL;
-    }
-
-    if( pdwFileSize )
-        *pdwFileSize = dwFileSize;
-    *ppFileData = pFileData;
-
-    return S_OK;
-}
-
-
-//--------------------------------------------------------------------------------------
-// Name: UnloadFile()
-// Desc: Matching unload
-//--------------------------------------------------------------------------------------
-VOID UnloadFile( VOID* pFileData )
-{
-	//assert( pFileData != NULL );
-    free( pFileData );
-}

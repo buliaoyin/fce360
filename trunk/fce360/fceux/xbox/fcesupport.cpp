@@ -27,12 +27,8 @@ void FCEUD_GetPalette(unsigned char i, unsigned char *r, unsigned char *g, unsig
 /**
  * Closes a game.  Frees memory, and deinitializes the drivers.
  */
-int
-CloseGame()
+int CloseGame()
 {
-    if(!romLoaded) {
-        return(0);
-    }
     FCEUI_CloseGame();
     GameInfo = 0;
     return(1);
