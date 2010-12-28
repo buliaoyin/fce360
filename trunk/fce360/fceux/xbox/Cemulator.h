@@ -104,7 +104,7 @@ private:
 		}
 
 		STDMETHOD_( void, OnBufferEnd ) ( void *pBufferContext ) {
-			//ASSERT( hBufferEndEvent != NULL );
+			SetEvent( hBufferEndEvent );
 		}
 
 		// dummies:
