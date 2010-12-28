@@ -531,9 +531,18 @@ void Cemulator::UpdateInput()
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_A)
 				pad[dwUser] |= JOY_A;
 
+			if(Gamepads[dwUser].bLeftTrigger>XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
+				pad[dwUser] |= JOY_A;
+
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_B)
 				pad[dwUser] |= JOY_B;
 
+			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_X)
+				pad[dwUser] |= JOY_B;
+
+			if(Gamepads[dwUser].bRightTrigger>XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
+				pad[dwUser] |= JOY_B;
+				
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_START)
 				pad[dwUser] |= JOY_START;
 			
