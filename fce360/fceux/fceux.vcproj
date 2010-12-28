@@ -1900,6 +1900,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\xbox\config_reader.h"
+				>
+			</File>
+			<File
 				RelativePath=".\xbox\fceload.cpp"
 				>
 			</File>
@@ -1932,11 +1936,23 @@
 				>
 			</File>
 			<File
+				RelativePath=".\xbox\SimpleIni.h"
+				>
+			</File>
+			<File
 				RelativePath=".\xbox\xbvideo.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\xbox\xbvideo.h"
+				>
+			</File>
+			<File
+				RelativePath=".\xbox\xconfig.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\xbox\xconfig.h"
 				>
 			</File>
 			<File
