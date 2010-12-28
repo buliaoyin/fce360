@@ -420,7 +420,7 @@ HRESULT Cemulator::InitAudio()
 //-------------------------------------------------------------------------------------
 //	Source voice
 //-------------------------------------------------------------------------------------
-	if(FAILED( g_pXAudio2->CreateSourceVoice(&g_pSourceVoice,(WAVEFORMATEX*)&wfx, XAUDIO2_VOICE_NOSRC, 1.0f, &XAudio2_Notifier)	))
+	if(FAILED( g_pXAudio2->CreateSourceVoice(&g_pSourceVoice,(WAVEFORMATEX*)&wfx, XAUDIO2_VOICE_NOSRC | XAUDIO2_VOICE_NOPITCH , 1.0f, &XAudio2_Notifier)	))
 	{
 		printf("CreateSourceVoice failed\n");
 		return E_FAIL;
@@ -449,6 +449,7 @@ HRESULT Cemulator::InitAudio()
 	return S_OK;
 };
 
+
 void Cemulator::UpdateAudio(int * snd, int sndsize)
 {
 	if(sndsize==0)
@@ -464,7 +465,8 @@ void Cemulator::UpdateAudio(int * snd, int sndsize)
 		}
 		else
 		{
-			WaitForSingleObject( XAudio2_Notifier.hBufferEndEvent, INFINITE );
+			break;
+			//WaitForSingleObject( XAudio2_Notifier.hBufferEndEvent, INFINITE );
 		}
 	}
 
@@ -476,23 +478,16 @@ void Cemulator::UpdateAudio(int * snd, int sndsize)
 	if(submit_size % 4)
 		submit_size =( ( sndsize / 4 ) + 1 ) * 4;
 
-	int iii = 0;
-	for(int i=0;i<sndsize;i++)
-	{
+	for(int i = 0;i<sndsize*sizeof(int);i++)
 		g_sound_buffer[i]=snd[i];
-	}
-	
+
 	//Nouvelle méthode pour calculer la taile d'un buffer audio
 	// (hz * (bufsize / block(??)) * nbchannel)/1000(???)
-	submit_size  =  (48000 * (128 / 8) * 1) / 1000;
-	/*
-	g_SoundBuffer.AudioBytes = submit_size * sizeof(int16);	//size of the audio buffer in bytes
+	submit_size  =  ( 48000 * (128/16) * 1) / 1000;
+
+	g_SoundBuffer.AudioBytes = sndsize * sizeof(int16);	//size of the audio buffer in bytes
 	g_SoundBuffer.pAudioData = (BYTE*)g_sound_buffer;		//buffer containing audio data
-	//g_SoundBuffer.Flags = XAUDIO2_END_OF_STREAM;
-	*/
-	g_SoundBuffer.AudioBytes = submit_size;	//size of the audio buffer in bytes
-	g_SoundBuffer.pAudioData = (BYTE*)snd;		//buffer containing audio data
-	
+	g_SoundBuffer.Flags = XAUDIO2_END_OF_STREAM;
 //-------------------------------------------------------------------------------------
 // Send sound stream
 //-------------------------------------------------------------------------------------	
@@ -755,7 +750,7 @@ HRESULT Cemulator::Run()
 		int32 sndsize;
 		
 		gfx_filter.SetTextureDimension(GetWidth(), GetHeight());
-		gfx_filter.UseFilter( gfx_hq3x );
+		gfx_filter.UseFilter( gfx_normal );
 
 		while(end==false)
 		{
