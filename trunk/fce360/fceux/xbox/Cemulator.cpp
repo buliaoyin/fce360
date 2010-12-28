@@ -20,6 +20,8 @@ extern "C"
 #include "Cemulator.h"
 #include "audio.h"
 #include "input.h"
+#include "xconfig.h"
+#include "config_reader.h"
 
 //#define printf writeline
 
@@ -568,6 +570,37 @@ HRESULT Cemulator::InitSystem()
 //-------------------------------------------------------------------------------------
 	g_sound_buffer = (int16 *)malloc(SOUND_BUFFER_SIZE * sizeof(int16));
 	memset(g_sound_buffer,0,SOUND_BUFFER_SIZE);
+
+	int sound, soundrate, soundbufsize, soundvolume, soundtrianglevolume, soundsquare1volume, soundsquare2volume, soundnoisevolume, soundpcmvolume, soundq;
+
+	extern Config fcecfg;
+
+	ReadConfig();
+
+	fcecfg.Find("sound","enabled", sound);
+	fcecfg.Find("sound","rate", soundrate);
+	fcecfg.Find("sound","bufsize", soundbufsize);
+	fcecfg.Find("sound","volume", soundvolume);
+	fcecfg.Find("sound","trianglevolume", soundtrianglevolume);
+	fcecfg.Find("sound","square1volume", soundsquare1volume);
+	fcecfg.Find("sound","square2volume", soundsquare2volume);
+	fcecfg.Find("sound","noisevolume", soundnoisevolume);
+	fcecfg.Find("sound","pcmvolume", soundpcmvolume);
+
+	//fcecfg.Find("video","region","NTSC"); //not used
+	fcecfg.Find("video","swfilter", SelectedGfxFilter);
+	fcecfg.Find("video","screenaspect", SelectedVertexFilter);
+	
+	FCEUI_Sound(soundrate);
+	FCEUI_SetSoundVolume(soundvolume);
+	FCEUI_SetLowPass(1);
+	//FCEUI_SetSoundQuality(soundq);
+    FCEUI_SetTriangleVolume(soundtrianglevolume);
+    FCEUI_SetSquare1Volume(soundsquare1volume);
+    FCEUI_SetSquare2Volume(soundsquare2volume);
+    FCEUI_SetNoiseVolume(soundnoisevolume);
+    FCEUI_SetPCMVolume(soundpcmvolume);
+	
 //-------------------------------------------------------------------------------------
 // Load roms
 //-------------------------------------------------------------------------------------
@@ -585,6 +618,7 @@ HRESULT Cemulator::LoadGame(std::string name, bool restart)
 //-------------------------------------------------------------------------------------
 	FCEUI_SetBaseDirectory("game:");
 	FCEUI_SetVidSystem(0);
+	InitSystem();
 	if(FCEUI_LoadGame(name.c_str() ,0)!=NULL)
 	{
 		FCEUI_SetInput(0, SI_GAMEPAD, (void*)&powerpadbuf, 0);
@@ -594,7 +628,7 @@ HRESULT Cemulator::LoadGame(std::string name, bool restart)
 		extern FCEUGI * GameInfo;
 		GameInfo->vidsys=GIV_NTSC;
 
-		InitSound();
+		//InitSound();
 
 		if(restart)
 			ResetNES();
@@ -759,7 +793,7 @@ HRESULT Cemulator::Run()
 		int32 sndsize;
 		
 		gfx_filter.SetTextureDimension(GetWidth(), GetHeight());
-		gfx_filter.UseFilter( gfx_normal );
+		gfx_filter.UseFilter( SelectedGfxFilter );
 
 		while(end==false)
 		{
