@@ -49,7 +49,6 @@ InitSound()
 	soundnoisevolume = 256;
 	soundpcmvolume = 256;
 
-	
     FCEUI_Sound(soundrate);
 	FCEUI_SetSoundVolume(soundvolume);
 	FCEUI_SetLowPass(1);
