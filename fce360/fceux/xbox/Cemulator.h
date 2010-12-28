@@ -37,9 +37,11 @@ class Cemulator
 {
 public:
 	DWORD SelectedVertexFilter;
+	DWORD SelectedGfxFilter;
 
 	void SetVertexFilter(int i){
 		SelectedVertexFilter = i;
+		SelectedGfxFilter = gfx_normal;
 	}
 
 	DWORD GetVertexFilter(){
