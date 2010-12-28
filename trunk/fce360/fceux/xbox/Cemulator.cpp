@@ -58,10 +58,13 @@ D3DXMATRIX g_matWorldViewProjection;
 //-------------------------------------------------------------------------------------
 // Audio
 //-------------------------------------------------------------------------------------
-#define SOUND_SAMPLES_SIZE  2048
 #define SOUND_BUFFER_SIZE 5000
 
+//fceux bitmap
 uint8 * bitmap;
+//bitmap with good color ARGB
+unsigned int * nesBitmap;
+//sound buffer
 int16 * g_sound_buffer;
 
 IXAudio2* g_pXAudio2 = NULL;
@@ -71,13 +74,13 @@ WAVEFORMATEXTENSIBLE wfx;
 XAUDIO2_BUFFER g_SoundBuffer;
 
 //
-unsigned int * nesBitmap;
+
 float ftime=0.f;
 
 //-------------------------------------------------------------------------------------
 // Input
 //-------------------------------------------------------------------------------------
-//GAMEPAD* m_pGamepad;
+GAMEPAD Gamepads[XUSER_MAX_COUNT];
 uint32 powerpadbuf=0;
 
 //-------------------------------------------------------------------------------------
@@ -134,23 +137,13 @@ LPD3DXMESH mesh;
 
 float g_pTexelSize[2];
 
-//SwFilter
-enum SwFilter{
-	NORMAL=1,
-	HQ2X=2,
-	HQ3X=3
-};
-DWORD SelectedSwFilter = HQ3X;
-
 //-------------------------------------------------------------------------------------
 // Cemulator
 //-------------------------------------------------------------------------------------
 Cemulator::Cemulator(void)
 {
 	end=false;
-	//defaut_rom=(DEFAULT_GAME);
 	RenderEmulation = false;//Display xui at first
-
 	SelectedVertexFilter = FullScreen;
 }
 
@@ -398,9 +391,6 @@ HRESULT Cemulator::InitAudio()
         return E_FAIL;
     }
 
-	g_sound_buffer = (int16 *)malloc(SOUND_BUFFER_SIZE * sizeof(int16));
-	memset(g_sound_buffer,0,SOUND_BUFFER_SIZE);
-
 //-------------------------------------------------------------------------------------
 // Create a mastering voice
 //-------------------------------------------------------------------------------------	
@@ -464,10 +454,9 @@ void Cemulator::UpdateAudio(int * snd, int sndsize)
 	if(sndsize==0)
 		return;
 
-	XAUDIO2_VOICE_STATE VoiceState;
-
 	while( true ) 
 	{
+		XAUDIO2_VOICE_STATE VoiceState;
 		g_pSourceVoice->GetState(&VoiceState);
 		if(VoiceState.BuffersQueued < 4)
 		{
@@ -493,10 +482,17 @@ void Cemulator::UpdateAudio(int * snd, int sndsize)
 		g_sound_buffer[i]=snd[i];
 	}
 	
+	//Nouvelle méthode pour calculer la taile d'un buffer audio
+	// (hz * (bufsize / block(??)) * nbchannel)/1000(???)
+	submit_size  =  (48000 * (128 / 8) * 1) / 1000;
+	/*
 	g_SoundBuffer.AudioBytes = submit_size * sizeof(int16);	//size of the audio buffer in bytes
 	g_SoundBuffer.pAudioData = (BYTE*)g_sound_buffer;		//buffer containing audio data
 	//g_SoundBuffer.Flags = XAUDIO2_END_OF_STREAM;
-
+	*/
+	g_SoundBuffer.AudioBytes = submit_size;	//size of the audio buffer in bytes
+	g_SoundBuffer.pAudioData = (BYTE*)snd;		//buffer containing audio data
+	
 //-------------------------------------------------------------------------------------
 // Send sound stream
 //-------------------------------------------------------------------------------------	
@@ -514,8 +510,9 @@ HRESULT Cemulator::InitInput()
 
 void Cemulator::UpdateInput()
 {
-	// Get input from all the gamepads
-	GAMEPAD Gamepads[XUSER_MAX_COUNT];
+//-------------------------------------------------------------------------------------
+// Get input from all the gamepads
+//-------------------------------------------------------------------------------------	
     Input::GetInput( Gamepads );
 
 	unsigned char pad[4];
@@ -524,7 +521,6 @@ void Cemulator::UpdateInput()
 	for( DWORD dwUser = 0; dwUser < 2; dwUser++ )
 	{
 		if(!FCEUI_EmulationPaused()){
-			/* Player #1 inputs */
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_DPAD_UP)
 				pad[dwUser] |= JOY_UP;
 
@@ -545,39 +541,15 @@ void Cemulator::UpdateInput()
 
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_START)
 				pad[dwUser] |= JOY_START;
-
 			
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_BACK)
 				pad[dwUser] |= JOY_SELECT;
-/*
-			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_X)
-			{
-				char state_name[512];
-				int val = 0;
-
-				sprintf(state_name, "game:\\states\\%s-%d.sav","mario",val);
-		
-				FCEUI_LoadState(state_name);
-			}
-			*/
 		}
-
-		//fé par xui ..
-		/*
-		if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_Y)
-			FCEUI_ToggleEmulationPause();
-			*/
-/*
-		//Pause and display xui
-		if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_BACK)
-		{
-			mRenderSms=false;
-		}
-		*/
 	}
-
-	//JSReturn = pad[0] | pad[1] << 8 | pad[2] << 16 | pad[3] << 24;
-
+	
+//-------------------------------------------------------------------------------------
+// Set input from all the gamepads
+//-------------------------------------------------------------------------------------	
 	powerpadbuf = pad[0] | pad[1] << 8 ;//| pad[2] << 16 | pad[3] << 24;;
 };
 
@@ -590,6 +562,8 @@ HRESULT Cemulator::InitSystem()
 //-------------------------------------------------------------------------------------
 // Set up sound
 //-------------------------------------------------------------------------------------
+	g_sound_buffer = (int16 *)malloc(SOUND_BUFFER_SIZE * sizeof(int16));
+	memset(g_sound_buffer,0,SOUND_BUFFER_SIZE);
 //-------------------------------------------------------------------------------------
 // Load roms
 //-------------------------------------------------------------------------------------
@@ -803,6 +777,9 @@ HRESULT Cemulator::Run()
 			Render();
 		}
 	}
+//-------------------------------------------------------------------------------------
+// End
+//-------------------------------------------------------------------------------------	
 	CloseSystem();
 	CloseVideo();
 	CloseAudio();
@@ -834,13 +811,6 @@ HRESULT Cemulator::CloseInput()
 
 HRESULT Cemulator::CloseSystem()
 {
-#if 0
-	//save states
-	save_state(AUTO_STATES);
-	system_poweroff();
-	//system_manage_sram(cart.sram,1,SRAM_SAVE);
-	system_shutdown();
-#endif
 	return S_OK;	
 };
 

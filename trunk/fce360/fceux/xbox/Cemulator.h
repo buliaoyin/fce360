@@ -214,7 +214,7 @@ private:
 
 	public:
 		GfxFilter(){
-			selFilter = gfx_hq2x;
+			selFilter = -1;//Will be updated later
 		};
 
 		void SetTextureDimension(DWORD32 width, DWORD32 height)
