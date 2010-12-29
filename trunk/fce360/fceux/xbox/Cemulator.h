@@ -102,9 +102,18 @@ private:
 		int soundpcmvolume;
 		int soundq;
 		
+		//video
 		DWORD SelectedVertexFilter;
 		DWORD SelectedGfxFilter;
 		
+		//controller
+		DWORD gamepad_dpad_up, gamepad_dpad_down, gamepad_dpad_left, gamepad_dpad_right, 
+			gamepad_start, gamepad_back, 
+			gamepad_left_thumb, gamepad_right_thumb, 
+			gamepad_left_shoulder, gamepad_right_shoulder, 
+			gamepad_a, gamepad_b, gamepad_x, gamepad_y,
+			gamepad_left_trigger, gamepad_right_trigger;
+			
 	} m_Settings;
 		
 //-------------------------------------------------------------------------------------

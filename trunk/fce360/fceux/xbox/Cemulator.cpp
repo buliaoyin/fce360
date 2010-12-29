@@ -519,37 +519,52 @@ void Cemulator::UpdateInput()
 	{
 		if(!FCEUI_EmulationPaused()){
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_DPAD_UP)
-				pad[dwUser] |= JOY_UP;
+				pad[dwUser] |= m_Settings.gamepad_dpad_up;
 
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_DPAD_DOWN)
-				pad[dwUser] |= JOY_DOWN;
+				pad[dwUser] |= m_Settings.gamepad_dpad_down;
 
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_DPAD_LEFT)
-				pad[dwUser] |= JOY_LEFT;
+				pad[dwUser] |= m_Settings.gamepad_dpad_left;
 
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_DPAD_RIGHT)
-				pad[dwUser] |= JOY_RIGHT;
+				pad[dwUser] |= m_Settings.gamepad_dpad_right;
 
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_A)
-				pad[dwUser] |= JOY_A;
-
-			if(Gamepads[dwUser].bLeftTrigger>XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
-				pad[dwUser] |= JOY_A;
+				pad[dwUser] |= m_Settings.gamepad_a;
 
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_B)
-				pad[dwUser] |= JOY_B;
+				pad[dwUser] |= m_Settings.gamepad_b;
 
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_X)
-				pad[dwUser] |= JOY_B;
+				pad[dwUser] |= m_Settings.gamepad_x;
+			
+			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_Y)
+				pad[dwUser] |= m_Settings.gamepad_y;
+				
+			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_LEFT_THUMB)
+				pad[dwUser] |= m_Settings.gamepad_left_thumb;
 
+			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_RIGHT_THUMB)
+				pad[dwUser] |= m_Settings.gamepad_right_thumb;
+
+			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_LEFT_SHOULDER)
+				pad[dwUser] |= m_Settings.gamepad_left_shoulder;
+			
+			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER)
+				pad[dwUser] |= m_Settings.gamepad_right_shoulder;
+				
+			if(Gamepads[dwUser].bLeftTrigger>XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
+				pad[dwUser] |= m_Settings.gamepad_left_trigger;
+				
 			if(Gamepads[dwUser].bRightTrigger>XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
-				pad[dwUser] |= JOY_B;
+				pad[dwUser] |= m_Settings.gamepad_right_trigger;
 				
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_START)
-				pad[dwUser] |= JOY_START;
+				pad[dwUser] |= m_Settings.gamepad_start;
 			
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_BACK)
-				pad[dwUser] |= JOY_SELECT;
+				pad[dwUser] |= m_Settings.gamepad_back;
 		}
 	}
 	
@@ -593,6 +608,23 @@ HRESULT Cemulator::InitSystem()
 	//fcecfg.Find("video","region","NTSC"); //not used
 	fcecfg.Find("video","swfilter", m_Settings.SelectedGfxFilter);
 	fcecfg.Find("video","screenaspect", m_Settings.SelectedVertexFilter);
+	
+	fcecfg.Find("controller","XINPUT_GAMEPAD_DPAD_UP", m_Settings.gamepad_dpad_up );
+	fcecfg.Find("controller","XINPUT_GAMEPAD_DPAD_DOWN", m_Settings.gamepad_dpad_down );
+	fcecfg.Find("controller","XINPUT_GAMEPAD_DPAD_LEFT", m_Settings.gamepad_dpad_left );
+	fcecfg.Find("controller","XINPUT_GAMEPAD_DPAD_RIGHT", m_Settings.gamepad_dpad_right );
+	fcecfg.Find("controller","XINPUT_GAMEPAD_START", m_Settings.gamepad_start );
+	fcecfg.Find("controller","XINPUT_GAMEPAD_BACK", m_Settings.gamepad_back );
+	fcecfg.Find("controller","XINPUT_GAMEPAD_A", m_Settings.gamepad_a );
+	fcecfg.Find("controller","XINPUT_GAMEPAD_B", m_Settings.gamepad_b );
+	fcecfg.Find("controller","XINPUT_GAMEPAD_X", m_Settings.gamepad_x );
+	fcecfg.Find("controller","XINPUT_GAMEPAD_Y", m_Settings.gamepad_y);
+	fcecfg.Find("controller","XINPUT_GAMEPAD_LEFT_THUMB", m_Settings.gamepad_left_thumb );
+	fcecfg.Find("controller","XINPUT_GAMEPAD_RIGHT_THUMB", m_Settings.gamepad_right_thumb );
+	fcecfg.Find("controller","XINPUT_GAMEPAD_LEFT_SHOULDER", m_Settings.gamepad_left_shoulder);
+	fcecfg.Find("controller","XINPUT_GAMEPAD_RIGHT_SHOULDER", m_Settings.gamepad_right_shoulder);
+	fcecfg.Find("controller","XINPUT_LEFT_TRIGGER", m_Settings.gamepad_left_trigger);
+	fcecfg.Find("controller","XINPUT_RIGHT_TRIGGER", m_Settings.gamepad_right_trigger);
 	
 //-------------------------------------------------------------------------------------
 // Load roms
