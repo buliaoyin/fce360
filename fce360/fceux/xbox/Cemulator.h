@@ -36,9 +36,6 @@ enum VIDEO_VERTEX_FILTER{
 class Cemulator
 {
 public:
-	DWORD SelectedVertexFilter;
-	DWORD SelectedGfxFilter;
-
 	void SetVertexFilter(int i){
 		SelectedVertexFilter = i;
 		SelectedGfxFilter = gfx_normal;
@@ -88,8 +85,31 @@ private:
 	{
 		end=true;
 	}
+	
+//-------------------------------------------------------------------------------------
+// 	Store Settings here
+//-------------------------------------------------------------------------------------
+	struct Settings{
+		//Sound
+		int sound;
+		int soundrate; 
+		int soundbufsize;
+		int soundvolume;
+		int soundtrianglevolume;
+		int soundsquare1volume;
+		int soundsquare2volume;
+		int soundnoisevolume;
+		int soundpcmvolume;
+		int soundq;
 		
-	// Synchronization Event
+		DWORD SelectedVertexFilter;
+		DWORD SelectedGfxFilter;
+		
+	} m_Settings;
+		
+//-------------------------------------------------------------------------------------
+// 	Audio Synchronization
+//-------------------------------------------------------------------------------------
 	class XAudio2_BufferNotify : public IXAudio2VoiceCallback
 	{
 	public:
@@ -119,6 +139,10 @@ private:
 	};
 	XAudio2_BufferNotify XAudio2_Notifier; //XAudio2 event notifier
 
+		
+//-------------------------------------------------------------------------------------
+// 	Framelimit Synchronization
+//-------------------------------------------------------------------------------------
 	class FrameSkip
 	{
 	public:
@@ -153,6 +177,11 @@ private:
 	};
 	FrameSkip fskip;
 
+	
+//-------------------------------------------------------------------------------------
+// 	Gfx filter
+//-------------------------------------------------------------------------------------	
+	
 	enum __gfxfilter{
 		gfx_normal,
 		gfx_hq2x,

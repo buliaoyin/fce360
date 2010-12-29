@@ -146,7 +146,7 @@ Cemulator::Cemulator(void)
 {
 	end=false;
 	RenderEmulation = false;//Display xui at first
-	SelectedVertexFilter = FullScreen;
+	m_Settings.SelectedVertexFilter = FullScreen;
 }
 
 HRESULT Cemulator::InitVideo(){
@@ -409,7 +409,7 @@ HRESULT Cemulator::InitAudio()
 	memset(&wfx, 0, sizeof(WAVEFORMATEXTENSIBLE));
 	
 	wfx.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE ;
-	wfx.Format.nSamplesPerSec       = 48000;
+	wfx.Format.nSamplesPerSec       = m_Settings.soundrate;//48000 by default
 	wfx.Format.nChannels            = 1;
 	wfx.Format.wBitsPerSample       = 16;
 	wfx.Format.nBlockAlign          = wfx.Format.nChannels*wfx.Format.wBitsPerSample/8;
@@ -485,7 +485,7 @@ void Cemulator::UpdateAudio(int * snd, int sndsize)
 
 	//Nouvelle méthode pour calculer la taile d'un buffer audio
 	// (hz * (bufsize / block(??)) * nbchannel)/1000(???)
-	submit_size  =  ( 48000 * (128/16) * 1) / 1000;
+	submit_size  =  ( m_Settings.soundrate * (128/16) * 1) / 1000;
 
 	g_SoundBuffer.AudioBytes = sndsize * sizeof(int16);	//size of the audio buffer in bytes
 	g_SoundBuffer.pAudioData = (BYTE*)g_sound_buffer;		//buffer containing audio data
@@ -571,35 +571,28 @@ HRESULT Cemulator::InitSystem()
 	g_sound_buffer = (int16 *)malloc(SOUND_BUFFER_SIZE * sizeof(int16));
 	memset(g_sound_buffer,0,SOUND_BUFFER_SIZE);
 
-	int sound, soundrate, soundbufsize, soundvolume, soundtrianglevolume, soundsquare1volume, soundsquare2volume, soundnoisevolume, soundpcmvolume, soundq;
-
+//-------------------------------------------------------------------------------------
+// Read config
+//-------------------------------------------------------------------------------------
 	extern Config fcecfg;
 
+	//Load and save configuration
 	ReadConfig();
 
-	fcecfg.Find("sound","enabled", sound);
-	fcecfg.Find("sound","rate", soundrate);
-	fcecfg.Find("sound","bufsize", soundbufsize);
-	fcecfg.Find("sound","volume", soundvolume);
-	fcecfg.Find("sound","trianglevolume", soundtrianglevolume);
-	fcecfg.Find("sound","square1volume", soundsquare1volume);
-	fcecfg.Find("sound","square2volume", soundsquare2volume);
-	fcecfg.Find("sound","noisevolume", soundnoisevolume);
-	fcecfg.Find("sound","pcmvolume", soundpcmvolume);
+	//Fetch configuration
+	fcecfg.Find("sound","enabled", m_Settings.sound);
+	fcecfg.Find("sound","rate", m_Settings.soundrate);
+	fcecfg.Find("sound","bufsize", m_Settings.soundbufsize);
+	fcecfg.Find("sound","volume", m_Settings.soundvolume);
+	fcecfg.Find("sound","trianglevolume", m_Settings.soundtrianglevolume);
+	fcecfg.Find("sound","square1volume", m_Settings.soundsquare1volume);
+	fcecfg.Find("sound","square2volume", m_Settings.soundsquare2volume);
+	fcecfg.Find("sound","noisevolume", m_Settings.soundnoisevolume);
+	fcecfg.Find("sound","pcmvolume", m_Settings.soundpcmvolume);
 
 	//fcecfg.Find("video","region","NTSC"); //not used
-	fcecfg.Find("video","swfilter", SelectedGfxFilter);
-	fcecfg.Find("video","screenaspect", SelectedVertexFilter);
-	
-	FCEUI_Sound(soundrate);
-	FCEUI_SetSoundVolume(soundvolume);
-	FCEUI_SetLowPass(1);
-	//FCEUI_SetSoundQuality(soundq);
-    FCEUI_SetTriangleVolume(soundtrianglevolume);
-    FCEUI_SetSquare1Volume(soundsquare1volume);
-    FCEUI_SetSquare2Volume(soundsquare2volume);
-    FCEUI_SetNoiseVolume(soundnoisevolume);
-    FCEUI_SetPCMVolume(soundpcmvolume);
+	fcecfg.Find("video","swfilter", m_Settings.SelectedGfxFilter);
+	fcecfg.Find("video","screenaspect", m_Settings.SelectedVertexFilter);
 	
 //-------------------------------------------------------------------------------------
 // Load roms
@@ -618,7 +611,19 @@ HRESULT Cemulator::LoadGame(std::string name, bool restart)
 //-------------------------------------------------------------------------------------
 	FCEUI_SetBaseDirectory("game:");
 	FCEUI_SetVidSystem(0);
-	InitSystem();
+
+	//Apply settings
+	FCEUI_Sound(m_Settings.soundrate);
+	FCEUI_SetSoundVolume(m_Settings.soundvolume);
+	FCEUI_SetLowPass(1);
+	//FCEUI_SetSoundQuality(m_Settings.soundq);
+    FCEUI_SetTriangleVolume(m_Settings.soundtrianglevolume);
+    FCEUI_SetSquare1Volume(m_Settings.soundsquare1volume);
+    FCEUI_SetSquare2Volume(m_Settings.soundsquare2volume);
+    FCEUI_SetNoiseVolume(m_Settings.soundnoisevolume);
+    FCEUI_SetPCMVolume(m_Settings.soundpcmvolume);
+	
+	
 	if(FCEUI_LoadGame(name.c_str() ,0)!=NULL)
 	{
 		FCEUI_SetInput(0, SI_GAMEPAD, (void*)&powerpadbuf, 0);
@@ -707,7 +712,7 @@ void Cemulator::Render()
 //-------------------------------------------------------------------------------------	
 	if(RenderEmulation==true)
 	{
-		switch(SelectedVertexFilter)
+		switch(m_Settings.SelectedVertexFilter)
 		{
 			case FullScreen:
 				g_effect->SetTechnique( g_technique_model_fullscreen );
@@ -764,6 +769,12 @@ HRESULT Cemulator::Run()
 		printf("InitVideo failed\n");
 		return E_FAIL;
 	}
+	//Load Configuration
+	if(FAILED( InitSystem()	))
+	{
+		printf("InitSystem failed\n");
+		return E_FAIL;
+	}
 	if(FAILED( InitAudio()	))
 	{
 		printf("InitAudio failed\n");
@@ -774,11 +785,7 @@ HRESULT Cemulator::Run()
 		printf("InitInput failed\n");
 		return E_FAIL;
 	}
-	if(FAILED( InitSystem()	))
-	{
-		printf("InitSystem failed\n");
-		return E_FAIL;
-	}
+	
 
 	FCEUI_Initialize();
 
@@ -793,7 +800,8 @@ HRESULT Cemulator::Run()
 		int32 sndsize;
 		
 		gfx_filter.SetTextureDimension(GetWidth(), GetHeight());
-		gfx_filter.UseFilter( SelectedGfxFilter );
+		//filter from configuration - can be updated by xui
+		gfx_filter.UseFilter( m_Settings.SelectedGfxFilter );
 
 		while(end==false)
 		{
