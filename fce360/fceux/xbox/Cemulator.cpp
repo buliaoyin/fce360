@@ -647,7 +647,7 @@ HRESULT Cemulator::LoadGame(std::string name, bool restart)
 	//Apply settings
 	FCEUI_Sound(m_Settings.soundrate);
 	FCEUI_SetSoundVolume(m_Settings.soundvolume);
-	FCEUI_SetLowPass(1);
+	FCEUI_SetLowPass(0);
 	//FCEUI_SetSoundQuality(m_Settings.soundq);
     FCEUI_SetTriangleVolume(m_Settings.soundtrianglevolume);
     FCEUI_SetSquare1Volume(m_Settings.soundsquare1volume);

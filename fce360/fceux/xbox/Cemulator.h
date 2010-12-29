@@ -35,16 +35,6 @@ enum VIDEO_VERTEX_FILTER{
 
 class Cemulator
 {
-public:
-	void SetVertexFilter(int i){
-		SelectedVertexFilter = i;
-		SelectedGfxFilter = gfx_normal;
-	}
-
-	DWORD GetVertexFilter(){
-		return SelectedVertexFilter;
-	}
-
 private:
 	std::string defaut_rom;
 	int mWidth;
@@ -115,7 +105,7 @@ private:
 			gamepad_left_trigger, gamepad_right_trigger;
 			
 	} m_Settings;
-		
+
 //-------------------------------------------------------------------------------------
 // 	Audio Synchronization
 //-------------------------------------------------------------------------------------
@@ -355,4 +345,13 @@ public:
 	}
 	//Run
 	HRESULT Run();
+
+	//Used on ui
+	void SetVertexFilter(int i){
+		m_Settings.SelectedVertexFilter = i;
+	}
+
+	DWORD GetVertexFilter(){
+		return m_Settings.SelectedVertexFilter;
+	}
 };
