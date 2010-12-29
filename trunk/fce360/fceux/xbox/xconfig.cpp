@@ -1,4 +1,5 @@
 // config.cpp : définit le point d'entrée pour l'application console.
+#include "xbox/fceusupport.h"
 #include "config_reader.h"
 #include <iostream>
 
