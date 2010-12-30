@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <tchar.h>
 #include "..\Cemulator.h"
+#include "..\config_reader.h"
+
 
 extern Cemulator emul;//smsplus_pc.cpp
 
@@ -134,6 +136,25 @@ public:
 	}
 };
 
+typedef struct _LIST_ITEM_INFO {
+	LPCWSTR pwszText;
+	LPCWSTR pwszImage;
+	BOOL fChecked;
+	BOOL fEnabled;
+} LIST_ITEM_INFO;
+
+LIST_ITEM_INFO g_ListData[] = {
+	{ L"gfx_normal",		L"gfx_normal.png",		FALSE, TRUE },
+	{ L"gfx_hq2x",			L"gfx_hq2x.png",		FALSE, TRUE },
+	{ L"gfx_hq3x",			L"gfx_hq3x.png",		FALSE, TRUE },
+	{ L"gfx_2xsai",			L"gfx_2xsai.png",		FALSE, TRUE },
+	{ L"gfx_super2sai",		L"gfx_super2sai.png",   FALSE, TRUE },
+	{ L"gfx_superEagle",	L"gfx_superEagle.png",	FALSE, TRUE },
+};
+
+#define LIST_ITEM_COUNT (sizeof(g_ListData)/sizeof(LIST_ITEM_INFO))
+
+
 class Osd: public CXuiEmulationScene
 {
 private:
@@ -145,13 +166,9 @@ private:
 	CXuiControl XuiBack;
 	CXuiControl XuiLoadGame;
 
-	CXuiCheckbox XuiNormal;
-	CXuiCheckbox XuiHq2x;
-	
-	CXuiCheckbox XuiTv;
-	CXuiCheckbox XuiFullscren;
-
-	CXuiList XuiSlotSelector;
+	CXuiList XuiSwFilter;
+	CXuiCheckbox XuiFullScreen;
+	CXuiControl XuiSwSelFilter;
 
 	typedef struct s_save_item{
 		std::string filename;
@@ -180,8 +197,26 @@ public:
 	HRESULT OnLeaveTab( BOOL &bHandled){
 		emul.RenderEmulation = false;//stop emulation
 		FCEUI_SetEmulationPaused(0);
+
+		emul.m_Settings.SelectedVertexFilter = XuiFullScreen.IsChecked()?0:1;
+
+		extern Config fcecfg;
+		fcecfg.Set("video","swfilter", emul.m_Settings.SelectedGfxFilter);
+		fcecfg.Set("video","screenaspect", emul.m_Settings.SelectedVertexFilter);
+		fcecfg.Save("game:\\fceui.ini");
+
 		return S_OK;
 	}
+
+	/*
+	gfx_normal,
+	gfx_hq2x,
+	gfx_hq3x,
+	gfx_2xsai,
+	gfx_super2sai,
+	gfx_superEagle
+	*/
+
 
     //--------------------------------------------------------------------------------------
     // Name: OnInit
@@ -192,45 +227,37 @@ public:
 		EnableTab(false);
 
 		HRESULT hr = GetChildById( L"XuiSaveStateSlot", &XuiSaveStateSlot );
-        if( FAILED( hr ) ){	return hr;	}
+
+		hr = GetChildById( L"XuiSwSelFilter", &XuiSwSelFilter );
 
 		hr = GetChildById( L"XuiSaveState", &XuiSaveState );
-        if( FAILED( hr ) ){	return hr;	}
 
 		hr = GetChildById( L"XuiBack", &XuiBack );
-        if( FAILED( hr ) ){	return hr;	}
 
 		hr = GetChildById( L"XuiLoadState", &XuiLoadState );
-        if( FAILED( hr ) ){	return hr;	}
 
 		hr = GetChildById( L"XuiReset", &XuiReset );
-        if( FAILED( hr ) ){	return hr;	}
 		
 		hr = GetChildById( L"XuiLoadGame", &XuiLoadGame );
-        if( FAILED( hr ) ){	return hr;	}
-#if 0
-		hr = GetChildById( L"XuiSlotSelector", &XuiSlotSelector );
-        if( FAILED( hr ) ){	return hr;	}
 
-		//
-		hr = GetChildById( L"XuiNormal", &XuiNormal );
-        if( FAILED( hr ) ){	return hr;	}
+		hr = GetChildById( L"XuiFullScreen", &XuiFullScreen );
+		
+		hr = GetChildById( L"XuiSwFilter", &XuiSwFilter );
 
-		hr = GetChildById( L"XuiFullscren", &XuiFullscren );
-        if( FAILED( hr ) ){	return hr;	}
+		if(!emul.m_Settings.SelectedVertexFilter)
+			XuiFullScreen.SetCheck(TRUE);
+		else
+			XuiFullScreen.SetCheck(FALSE);
 
-		hr = GetChildById( L"XuiHq2x", &XuiHq2x );
-        if( FAILED( hr ) ){	return hr;	}
+		XuiSwSelFilter.SetText(g_ListData[emul.m_Settings.SelectedVertexFilter].pwszText );
+		XuiSwFilter.SetCurSel(emul.m_Settings.SelectedVertexFilter);
 
-		hr = GetChildById( L"XuiTv", &XuiTv );
-        if( FAILED( hr ) ){	return hr;	}
+		XuiSwFilter.InsertItems(0,LIST_ITEM_COUNT);
 
-		XuiNormal.SetCheck(true);
-		XuiFullscren.SetCheck(true);
-
-		XuiHq2x.SetCheck(false);
-		XuiTv.SetCheck(false);
-#endif
+		for(int i = 0;i<LIST_ITEM_COUNT;i++){
+			XuiSwFilter.SetText(i, g_ListData[i].pwszText);
+		};
+		
         return S_OK;
     }
 
@@ -251,6 +278,7 @@ public:
 	};
 
 	void ScanSlot(){
+#if 0
 		//scan for 10 slot
 		extern FCEUGI * GameInfo;
 		//compute the md5 of file to a string
@@ -282,36 +310,9 @@ public:
 			XuiSlotSelector.SetText(j,L"test");
 			XuiSlotSelector.SetImage(j,L"test");
 		}
+#endif
 	};
 
-	void SwFilter()
-	{
-		bool b_hq2x = XuiHq2x.IsChecked();
-		bool b_normal = XuiNormal.IsChecked();
-
-		if(b_hq2x) XuiNormal.SetCheck(false);
-		if(b_normal) XuiHq2x.SetCheck(false);
-	}
-
-	void VertexFilter()
-	{
-		bool b_fullscreen = XuiFullscren.IsChecked();
-		if(b_fullscreen)
-		{
-			XuiTv.SetCheck(false);
-			XuiFullscren.SetCheck(true);
-			emul.SetVertexFilter(TvScreen);
-		}
-
-		bool b_tv = XuiTv.IsChecked();
-		if(b_tv)
-		{
-			XuiFullscren.SetCheck(false);
-			XuiTv.SetCheck(true);
-			emul.SetVertexFilter(FullScreen);
-		}
-		
-	}
 
 	//----------------------------------------------------------------------------------
 	// Name: OnNotifyPress
@@ -320,23 +321,10 @@ public:
 	HRESULT OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled )
 	{
 		HRESULT hr = S_OK;
-		//sw filter
-		if( hObjPressed == XuiNormal )
-		{
-			SwFilter();
-		}
-		if( hObjPressed == XuiHq2x )
-		{
-			SwFilter();
-		}
-		//vertex
-		if( hObjPressed == XuiTv )
-		{
-			VertexFilter();
-		}
-		if( hObjPressed == XuiFullscren )
-		{
-			VertexFilter();
+		if(hObjPressed == XuiSwFilter){
+			emul.m_Settings.SelectedGfxFilter = XuiSwFilter.GetCurSel();
+			emul.gfx_filter.UseFilter( emul.m_Settings.SelectedGfxFilter );
+			bHandled = TRUE;
 		}
 
 		if( hObjPressed == XuiSaveState )
