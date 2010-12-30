@@ -20,6 +20,7 @@ float4x4 g_mWorld;                  // World matrix for object
 float4x4 g_mWorldViewProjection;    // World * View * Projection matrix
 
 texture g_MeshTexture;              // Color texture for mesh
+texture g_bgTexture;              	// Color texture for mesh
 
 float2 g_TexelSize : TEXELSIZE;
 
@@ -39,6 +40,14 @@ sampler_state
     MagFilter = POINT;
 };
 
+sampler BgTextureSampler = 
+sampler_state
+{
+    Texture = <g_bgTexture>;
+	MipFilter = LINEAR ;
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
+};
 
 //--------------------------------------------------------------------------------------
 // Vertex shader output structure
@@ -138,6 +147,14 @@ PS_OUTPUT RenderScenePS( VS_OUTPUT In )
 	Output.RGBColor.a = 1.0f;
     return Output;
 }
+PS_OUTPUT RenderBgPS( VS_OUTPUT In ) 
+{ 
+    PS_OUTPUT Output;
+
+	Output.RGBColor = tex2D(BgTextureSampler, In.TextureUV);
+	Output.RGBColor.a = 1.0f;
+    return Output;
+}
 
 //--------------------------------------------------------------------------------------
 // Renders Background 
@@ -147,7 +164,7 @@ technique RenderFullScreen
     pass P0
     {          
 		VertexShader = compile vs_2_0 FullScreenVS();
-        PixelShader  = compile ps_2_0 RenderScenePS(); 
+        PixelShader  = compile ps_2_0 RenderBgPS(); 
     }
 }
 
