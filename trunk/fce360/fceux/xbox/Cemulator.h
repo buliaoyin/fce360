@@ -75,7 +75,7 @@ private:
 	{
 		end=true;
 	}
-	
+public:
 //-------------------------------------------------------------------------------------
 // 	Store Settings here
 //-------------------------------------------------------------------------------------
@@ -105,7 +105,7 @@ private:
 			gamepad_left_trigger, gamepad_right_trigger;
 			
 	} m_Settings;
-
+private:
 //-------------------------------------------------------------------------------------
 // 	Audio Synchronization
 //-------------------------------------------------------------------------------------
@@ -309,8 +309,9 @@ private:
 			}
 		};
 	};
-	GfxFilter gfx_filter;
+	
 public:
+	GfxFilter gfx_filter;
 	Cemulator(void);
 
 	//render emu or ui
