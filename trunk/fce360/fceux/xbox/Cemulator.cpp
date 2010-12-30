@@ -67,7 +67,7 @@ uint8 * bitmap;
 //bitmap with good color ARGB
 unsigned int * nesBitmap;
 //sound buffer
-int16 * g_sound_buffer;
+unsigned int * g_sound_buffer;
 
 IXAudio2* g_pXAudio2 = NULL;
 IXAudio2MasteringVoice* g_pMasteringVoice = NULL;
@@ -410,13 +410,13 @@ HRESULT Cemulator::InitAudio()
 	
 	wfx.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE ;
 	wfx.Format.nSamplesPerSec       = m_Settings.soundrate;//48000 by default
-	wfx.Format.nChannels            = 1;
+	wfx.Format.nChannels            = 2;
 	wfx.Format.wBitsPerSample       = 16;
 	wfx.Format.nBlockAlign          = wfx.Format.nChannels*wfx.Format.wBitsPerSample/8;
 	wfx.Format.nAvgBytesPerSec      = wfx.Format.nSamplesPerSec * wfx.Format.nBlockAlign;
 	wfx.Format.cbSize               = sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WAVEFORMATEX);
 	wfx.Samples.wValidBitsPerSample = wfx.Format.wBitsPerSample;
-	wfx.dwChannelMask               = SPEAKER_MONO;
+	wfx.dwChannelMask               = SPEAKER_STEREO;
 	wfx.SubFormat                   = KSDATAFORMAT_SUBTYPE_PCM;
 
 //-------------------------------------------------------------------------------------
@@ -480,15 +480,20 @@ void Cemulator::UpdateAudio(int * snd, int sndsize)
 	if(submit_size % 4)
 		submit_size =( ( sndsize / 4 ) + 1 ) * 4;
 
+	unsigned short sample;
+	unsigned int *dst = (unsigned int *)g_sound_buffer;
 	for(int i = 0;i<sndsize*sizeof(int);i++)
-		g_sound_buffer[i]=snd[i];
+	{
+		sample = snd[i] & 0xffff;
+		g_sound_buffer[i]=sample | ( sample << 16);
+	}
 
 	//Nouvelle méthode pour calculer la taile d'un buffer audio
 	// (hz * (bufsize / block(??)) * nbchannel)/1000(???)
 	submit_size  =  ( m_Settings.soundrate * (128/16) * 1) / 1000;
 
-	g_SoundBuffer.AudioBytes = sndsize * sizeof(int16);	//size of the audio buffer in bytes
-	g_SoundBuffer.pAudioData = (BYTE*)g_sound_buffer;		//buffer containing audio data
+	g_SoundBuffer.AudioBytes = sndsize * sizeof(int);	//size of the audio buffer in bytes
+	g_SoundBuffer.pAudioData = (BYTE*)g_sound_buffer;//;		//buffer containing audio data
 	g_SoundBuffer.Flags = XAUDIO2_END_OF_STREAM;
 //-------------------------------------------------------------------------------------
 // Send sound stream
@@ -583,7 +588,7 @@ HRESULT Cemulator::InitSystem()
 //-------------------------------------------------------------------------------------
 // Set up sound
 //-------------------------------------------------------------------------------------
-	g_sound_buffer = (int16 *)malloc(SOUND_BUFFER_SIZE * sizeof(int16));
+	g_sound_buffer = (unsigned int *)malloc(SOUND_BUFFER_SIZE * sizeof(unsigned int));
 	memset(g_sound_buffer,0,SOUND_BUFFER_SIZE);
 
 //-------------------------------------------------------------------------------------
