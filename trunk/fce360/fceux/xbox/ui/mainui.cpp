@@ -12,7 +12,6 @@
 #include "..\Cemulator.h"
 #include "..\config_reader.h"
 
-
 extern Cemulator emul;//smsplus_pc.cpp
 
 std::wstring strtowstr(std::string str)
@@ -124,7 +123,6 @@ public:
         return S_OK;
     }
 
-
 	HRESULT OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled )
 	{
 		HRESULT hr = S_OK;
@@ -208,16 +206,6 @@ public:
 		return S_OK;
 	}
 
-	/*
-	gfx_normal,
-	gfx_hq2x,
-	gfx_hq3x,
-	gfx_2xsai,
-	gfx_super2sai,
-	gfx_superEagle
-	*/
-
-
     //--------------------------------------------------------------------------------------
     // Name: OnInit
     // Desc: Message handler for XM_INIT
@@ -227,21 +215,13 @@ public:
 		EnableTab(false);
 
 		HRESULT hr = GetChildById( L"XuiSaveStateSlot", &XuiSaveStateSlot );
-
 		hr = GetChildById( L"XuiSwSelFilter", &XuiSwSelFilter );
-
 		hr = GetChildById( L"XuiSaveState", &XuiSaveState );
-
 		hr = GetChildById( L"XuiBack", &XuiBack );
-
 		hr = GetChildById( L"XuiLoadState", &XuiLoadState );
-
 		hr = GetChildById( L"XuiReset", &XuiReset );
-		
 		hr = GetChildById( L"XuiLoadGame", &XuiLoadGame );
-
 		hr = GetChildById( L"XuiFullScreen", &XuiFullScreen );
-		
 		hr = GetChildById( L"XuiSwFilter", &XuiSwFilter );
 
 		if(!emul.m_Settings.SelectedVertexFilter)

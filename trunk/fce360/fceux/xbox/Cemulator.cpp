@@ -126,6 +126,7 @@ D3DXHANDLE  g_MaterialAmbientColor;
 D3DXHANDLE  g_MaterialDiffuseColor;
 D3DXHANDLE  g_mWorldViewProjection;
 D3DXHANDLE  g_MeshTexture;
+D3DXHANDLE  g_bgTexture;
 D3DXHANDLE  g_technique_bg;
 D3DXHANDLE  g_technique_model;
 D3DXHANDLE  g_technique_model_tv;
@@ -329,6 +330,7 @@ HRESULT Cemulator::InitVideo(){
 	g_MaterialDiffuseColor = g_effect->GetParameterByName(NULL,  "g_MaterialDiffuseColor" );
 	g_mWorldViewProjection = g_effect->GetParameterByName(NULL,  "g_mWorldViewProjection" );
 	g_MeshTexture = g_effect->GetParameterByName(NULL,  "g_MeshTexture" );
+	g_bgTexture  = g_effect->GetParameterByName(NULL,  "g_bgTexture" );
 	g_TexelSize = g_effect->GetParameterByName(NULL,  "g_TexelSize" );
 	g_fTime = g_effect->GetParameterByName(NULL,  "g_fTime" );
 
@@ -718,6 +720,7 @@ void Cemulator::Render()
 	g_effect->SetValue ( g_fTime, &ftime, sizeof(float));
 	g_effect->SetMatrix( g_mWorldViewProjection, &g_matWorldViewProjection );
 	g_effect->SetTexture( g_MeshTexture, g_texture );
+	g_effect->SetTexture( g_bgTexture, g_bg_texture );
 	g_effect->SetTechnique( g_technique_model );
     g_effect->SetFloatArray(g_TexelSize,g_pTexelSize,2);
 
@@ -732,7 +735,6 @@ void Cemulator::Render()
 // Draw Bg
 //-------------------------------------------------------------------------------------	
 	g_effect->SetTechnique( g_technique_bg );
-	g_effect->SetTexture( g_MeshTexture, g_bg_texture );
 	g_effect->Begin( &cPasses, 0 );
 	g_pd3dDevice->SetVertexDeclaration( g_pVertexDecl );
 	g_pd3dDevice->SetStreamSource( 0, g_pVB, 0, sizeof(TEXTURED) );
