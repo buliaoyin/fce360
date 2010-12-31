@@ -420,6 +420,7 @@ public:
 		}
 		else
 		{
+			XuiRomList.DeleteItems(0, XuiRomList.GetItemCount());
 			//XuiRomList.addi
 			if(!FAILED(ScanDir()))
 			{
