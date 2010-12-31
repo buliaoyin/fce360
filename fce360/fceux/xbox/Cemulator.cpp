@@ -102,7 +102,7 @@ static const D3DVERTEXELEMENT9 g_ElementsTextured[4] =
     { 0, 12, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0 },
     D3DDECL_END()
 };
-
+/*
 struct TEXTURED g_VerticesTextured[] =
 {
 	//square
@@ -110,6 +110,16 @@ struct TEXTURED g_VerticesTextured[] =
 	{ -1.0f,  1.0f, 0.0f,  0.0f,  0.0f },//2
 	{  1.0f, -1.0f, 0.0f,  1.0f,  1.0f },//3
 	{  1.0f,  1.0f, 0.0f,  1.0f,  0.0f }//4
+};
+*/
+
+struct TEXTURED g_VerticesTextured[] =
+{
+	//square
+	{ -1.0f, -1.0f, 0.0f,  0.0f,  1.0f },//1
+	{ -1.0f,  1.0f, 0.0f,  0.0f,  0.0f },//2
+	{  1.0f,  1.0f, 0.0f,  1.0f,  0.0f },//4
+	{  1.0f, -1.0f, 0.0f,  1.0f,  1.0f }//3
 };
 
 static const D3DRECT g_tiles[3] = 
@@ -178,16 +188,16 @@ HRESULT Cemulator::InitVideo(){
 #endif
 
 #ifndef _XBOX
-    d3dpp.Windowed = TRUE;
-	d3dpp.BackBufferWidth        = 1280;
-    d3dpp.BackBufferHeight       = 720;
-	d3dpp.BackBufferFormat       = D3DFMT_X8R8G8B8;
-    d3dpp.BackBufferCount        = 1;
-    d3dpp.EnableAutoDepthStencil = TRUE;
-    d3dpp.AutoDepthStencilFormat = D3DFMT_D24S8;
-    d3dpp.SwapEffect             = D3DSWAPEFFECT_DISCARD;
-	d3dpp.PresentationInterval   = D3DPRESENT_INTERVAL_ONE ;
-	d3dpp.MultiSampleType = D3DMULTISAMPLE_4_SAMPLES;
+    g_d3dpp.Windowed = TRUE;
+	g_d3dpp.BackBufferWidth        = 1280;
+    g_d3dpp.BackBufferHeight       = 720;
+	g_d3dpp.BackBufferFormat       = D3DFMT_X8R8G8B8;
+    g_d3dpp.BackBufferCount        = 1;
+    g_d3dpp.EnableAutoDepthStencil = TRUE;
+    g_d3dpp.AutoDepthStencilFormat = D3DFMT_D24S8;
+    g_d3dpp.SwapEffect             = D3DSWAPEFFECT_DISCARD;
+	g_d3dpp.PresentationInterval   = D3DPRESENT_INTERVAL_ONE ;
+	g_d3dpp.MultiSampleType		   = D3DMULTISAMPLE_NONE;
 #else
 	g_d3dpp.BackBufferWidth = GetSystemWidth();
 	g_d3dpp.BackBufferHeight = GetSystemHeight();
@@ -219,9 +229,9 @@ HRESULT Cemulator::InitVideo(){
 	}
 
 #else
-	if( FAILED( g_pD3D->CreateDevice( 0, D3DDEVTYPE_HAL, hWnd,
-										D3DCREATE_SOFTWARE_VERTEXPROCESSING,
-										&d3dpp, &g_pd3dDevice ) ) )
+	if( FAILED( g_pD3D->CreateDevice( 0, D3DDEVTYPE_HAL, NULL,
+										NULL,
+										&g_d3dpp, &g_pd3dDevice ) ) )
 	{
 		printf("CreateDevice failed\n");
         return E_FAIL;
@@ -337,7 +347,7 @@ HRESULT Cemulator::InitVideo(){
 //-------------------------------------------------------------------------------------
 // Default Renderstates
 //-------------------------------------------------------------------------------------
-	g_pd3dDevice->SetRenderState( D3DRS_CULLMODE, D3DCULL_CCW );
+	g_pd3dDevice->SetRenderState( D3DRS_CULLMODE, D3DCULL_NONE );
 	g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
 	g_pd3dDevice->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
 	g_pd3dDevice->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
@@ -741,7 +751,7 @@ void Cemulator::Render()
 	for( iPass = 0; iPass < cPasses; iPass++ )
 	{
 		g_effect->BeginPass( iPass );
-		g_pd3dDevice->DrawPrimitiveUP( D3DPT_TRIANGLESTRIP, 2, g_VerticesTextured, sizeof( TEXTURED ) );
+		g_pd3dDevice->DrawPrimitiveUP( D3DPT_QUADLIST, 1, g_VerticesTextured, sizeof( TEXTURED ) );
 		g_effect->EndPass();
 	}
 	g_effect->End();
@@ -769,7 +779,8 @@ void Cemulator::Render()
 		for( iPass = 0; iPass < cPasses; iPass++ )
 		{
 			g_effect->BeginPass( iPass );
-			mesh->DrawSubset(0);
+			g_pd3dDevice->DrawPrimitiveUP( D3DPT_QUADLIST, 1, g_VerticesTextured, sizeof( TEXTURED ) );
+			//mesh->DrawSubset(0);
 			g_effect->EndPass();
 		}
 		g_effect->End();
