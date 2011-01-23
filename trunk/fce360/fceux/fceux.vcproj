@@ -1962,10 +1962,6 @@
 					RelativePath=".\xbox\ui\mainui.h"
 					>
 				</File>
-				<Filter
-					Name="NewFilter1"
-					>
-				</Filter>
 			</Filter>
 			<Filter
 				Name="vfilter"

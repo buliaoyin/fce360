@@ -126,6 +126,7 @@ private:
 
 		STDMETHOD_( void, OnBufferEnd ) ( void *pBufferContext ) {
 			SetEvent( hBufferEndEvent );
+			free(pBufferContext);
 		}
 
 		// dummies:
