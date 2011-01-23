@@ -1,33 +1,17 @@
 #include "xbox/fceusupport.h"
 #include "stdafx.h"
-
-#ifdef _XBOX
-#	include <xtl.h>
-#	include <fxl.h>
-#	include <xui.h>
-#else
-#	include <windows.h>
-#	include <d3d9.h>
-#	include <d3dx9tex.h>
-#	include <XInput.h>
-#endif
+#include <xtl.h>
+#include <fxl.h>
+#include <xui.h>
 #include <string>
 #include <vector>
 #include <xaudio2.h>
-extern "C"
-{
-}
+
 #include "Cemulator.h"
 #include "audio.h"
 #include "input.h"
 #include "xconfig.h"
 #include "config_reader.h"
-
-//#define printf writeline
-
-//ATG
-VOID UnloadFile( VOID* pFileData );
-HRESULT LoadFile( const CHAR* strFileName, VOID** ppFileData, DWORD* pdwFileSize );
 
 //-----------------------------------------------------------------------------
 // Global variables
@@ -102,16 +86,6 @@ static const D3DVERTEXELEMENT9 g_ElementsTextured[4] =
     { 0, 12, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0 },
     D3DDECL_END()
 };
-/*
-struct TEXTURED g_VerticesTextured[] =
-{
-	//square
-	{ -1.0f, -1.0f, 0.0f,  0.0f,  1.0f },//1
-	{ -1.0f,  1.0f, 0.0f,  0.0f,  0.0f },//2
-	{  1.0f, -1.0f, 0.0f,  1.0f,  1.0f },//3
-	{  1.0f,  1.0f, 0.0f,  1.0f,  0.0f }//4
-};
-*/
 
 struct TEXTURED g_VerticesTextured[] =
 {
@@ -161,12 +135,6 @@ Cemulator::Cemulator(void)
 }
 
 HRESULT Cemulator::InitVideo(){
-
-//-------------------------------------------------------------------------------------
-// Init Os
-//-------------------------------------------------------------------------------------
-	//InitWindows();
-
 //-------------------------------------------------------------------------------------
 // Create d3d device
 //-------------------------------------------------------------------------------------
@@ -174,8 +142,10 @@ HRESULT Cemulator::InitVideo(){
     if( !g_pD3D )
         return E_FAIL;
 
+//-------------------------------------------------------------------------------------
+// Set the system width 
+//-------------------------------------------------------------------------------------
     ZeroMemory( &g_d3dpp, sizeof(g_d3dpp) );
-#ifdef _XBOX
 	// Set up the structure used to create the D3DDevice.
 	XVIDEO_MODE VideoMode;
 	ZeroMemory( &VideoMode, sizeof( VideoMode ) );
@@ -183,22 +153,10 @@ HRESULT Cemulator::InitVideo(){
 	BOOL bEnable720p = ( VideoMode.dwDisplayHeight >= 720 ) ? TRUE : FALSE;
 	SetSystemWidth(( bEnable720p ) ? 1280 : 640);
 	SetSystemHeight(( bEnable720p ) ?  720 : 480);
-#else
-	SetSystemWidth(720);SetSystemHeight(480);
-#endif
-
-#ifndef _XBOX
-    g_d3dpp.Windowed = TRUE;
-	g_d3dpp.BackBufferWidth        = 1280;
-    g_d3dpp.BackBufferHeight       = 720;
-	g_d3dpp.BackBufferFormat       = D3DFMT_X8R8G8B8;
-    g_d3dpp.BackBufferCount        = 1;
-    g_d3dpp.EnableAutoDepthStencil = TRUE;
-    g_d3dpp.AutoDepthStencilFormat = D3DFMT_D24S8;
-    g_d3dpp.SwapEffect             = D3DSWAPEFFECT_DISCARD;
-	g_d3dpp.PresentationInterval   = D3DPRESENT_INTERVAL_ONE ;
-	g_d3dpp.MultiSampleType		   = D3DMULTISAMPLE_NONE;
-#else
+	
+//-------------------------------------------------------------------------------------
+// MSAA surface
+//-------------------------------------------------------------------------------------
 	g_d3dpp.BackBufferWidth = GetSystemWidth();
 	g_d3dpp.BackBufferHeight = GetSystemHeight();
     g_d3dpp.BackBufferFormat = ( D3DFORMAT )MAKESRGBFMT( D3DFMT_A8R8G8B8 );
@@ -212,9 +170,10 @@ HRESULT Cemulator::InitVideo(){
     g_d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
     g_d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
 	//g_d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
-#endif
 
-#ifdef _XBOX
+//-------------------------------------------------------------------------------------
+// MSAA surface
+//-------------------------------------------------------------------------------------
 	D3DSURFACE_PARAMETERS params = {0};
 	g_pd3dDevice->CreateRenderTarget( g_dwTileWidth, g_dwTileHeight, D3DFMT_X8R8G8B8, D3DMULTISAMPLE_4_SAMPLES, 0, 0, &m_pBackBuffer, &params );
 	params.Base = m_pBackBuffer->Size / GPU_EDRAM_TILE_SIZE;
@@ -227,20 +186,6 @@ HRESULT Cemulator::InitVideo(){
 		printf("CreateDevice failed\n");
         return E_FAIL;
 	}
-
-#else
-	if( FAILED( g_pD3D->CreateDevice( 0, D3DDEVTYPE_HAL, NULL,
-										NULL,
-										&g_d3dpp, &g_pd3dDevice ) ) )
-	{
-		printf("CreateDevice failed\n");
-        return E_FAIL;
-	}
-#endif
-//-------------------------------------------------------------------------------------
-// MSAA surface
-//-------------------------------------------------------------------------------------
-
 //-------------------------------------------------------------------------------------
 // Create the buffer, and load the effect from the file.
 //-------------------------------------------------------------------------------------
@@ -286,7 +231,6 @@ HRESULT Cemulator::InitVideo(){
 //-------------------------------------------------------------------------------------
 // Create the model
 //-------------------------------------------------------------------------------------
-
 	HRESULT hr=D3DXLoadMeshFromXA(X_FILE, D3DXMESH_SYSTEMMEM, 
                              g_pd3dDevice, NULL, 
                              &materialBuffer,NULL, &numMaterials, 
@@ -357,6 +301,7 @@ HRESULT Cemulator::InitVideo(){
 
 
 void Cemulator::UpdateVideo(){
+	/*
 //-------------------------------------------------------------------------------------
 // Refresh texture cache
 //-------------------------------------------------------------------------------------
@@ -391,6 +336,7 @@ void Cemulator::UpdateVideo(){
 	D3DXMatrixLookAtLH(&g_matView,&vEyePt, &vLookatPt, &vUp );
 
 	g_matWorldViewProjection = g_matWorld * g_matView * g_matProj;
+	*/
 };
 
 HRESULT Cemulator::InitAudio()
@@ -449,19 +395,10 @@ HRESULT Cemulator::InitAudio()
 		return E_FAIL;
 	}
 
-	//Sound ...
-	int len = SOUND_BUFFER_SIZE;
-	int16 * null_sound = (int16 *)malloc(SOUND_BUFFER_SIZE * sizeof(int16));
-	ZeroMemory(null_sound,len);
-
-	XAUDIO2_BUFFER buf = {0};
-	buf.AudioBytes = len;
-    buf.pContext=null_sound;
-    buf.pAudioData=(BYTE*)buf.pContext;
-    g_pSourceVoice->SubmitSourceBuffer( &buf );
-
 	return S_OK;
 };
+
+int snd_written = 0;
 
 
 void Cemulator::UpdateAudio(int * snd, int sndsize)
@@ -494,31 +431,40 @@ void Cemulator::UpdateAudio(int * snd, int sndsize)
 
 	unsigned short sample;
 	unsigned int *dst = (unsigned int *)g_sound_buffer;
-	for(int i = 0;i<sndsize*sizeof(int);i++)
+	
+	for(int i = 0;i<sndsize;i++)
 	{
 		sample = snd[i] & 0xffff;
-		g_sound_buffer[i]=sample | ( sample << 16);
-	}
+		g_sound_buffer[snd_written++]=sample | ( sample << 16);
+		if(snd_written==sndsize)
+		{
+			snd_written=0;
 
-	//Nouvelle méthode pour calculer la taile d'un buffer audio
-	// (hz * (bufsize / block(??)) * nbchannel)/1000(???)
-	submit_size  =  ( m_Settings.soundrate * (128/16) * 1) / 1000;
+			//Submit sound - fait une copie par secu
+			unsigned int * nes_sound = (unsigned int *)malloc(sndsize * sizeof(int));
+			memcpy(nes_sound,g_sound_buffer,sndsize* sizeof(int));
+			g_SoundBuffer.AudioBytes = sndsize * sizeof(int);	//size of the audio buffer in bytes
+			g_SoundBuffer.pAudioData = (BYTE*)nes_sound;//;		//buffer containing audio data
+			g_SoundBuffer.Flags = XAUDIO2_END_OF_STREAM;
 
-	g_SoundBuffer.AudioBytes = sndsize * sizeof(int);	//size of the audio buffer in bytes
-	g_SoundBuffer.pAudioData = (BYTE*)g_sound_buffer;//;		//buffer containing audio data
-	g_SoundBuffer.Flags = XAUDIO2_END_OF_STREAM;
-//-------------------------------------------------------------------------------------
-// Send sound stream
-//-------------------------------------------------------------------------------------	
-	if( FAILED(g_pSourceVoice->SubmitSourceBuffer( &g_SoundBuffer ) ) )
-	{
-		printf("SubmitSourceBuffer failed\n");
-		return ;
+			//-------------------------------------------------------------------------------------
+			// Send sound stream
+			//-------------------------------------------------------------------------------------	
+			if( FAILED(g_pSourceVoice->SubmitSourceBuffer( &g_SoundBuffer ) ) )
+			{
+				printf("SubmitSourceBuffer failed\n");
+				return ;
+			}
+		}
 	}
+	return;
 };
 
 HRESULT Cemulator::InitInput()
 {
+//-------------------------------------------------------------------------------------
+// Init input
+//-------------------------------------------------------------------------------------	
 	return S_OK;
 }
 
@@ -584,7 +530,6 @@ void Cemulator::UpdateInput()
 				pad[dwUser] |= m_Settings.gamepad_back;
 		}
 	}
-	
 //-------------------------------------------------------------------------------------
 // Set input from all the gamepads
 //-------------------------------------------------------------------------------------	
@@ -656,7 +601,12 @@ HRESULT Cemulator::InitSystem()
 HRESULT Cemulator::LoadGame(std::string name, bool restart)
 {
 //-------------------------------------------------------------------------------------
-// Load roms
+// Initilise emu
+//-------------------------------------------------------------------------------------
+	FCEUI_Initialize();
+
+//-------------------------------------------------------------------------------------
+// Set some setting
 //-------------------------------------------------------------------------------------
 	FCEUI_SetBaseDirectory("game:");
 	FCEUI_SetVidSystem(0);
@@ -672,7 +622,9 @@ HRESULT Cemulator::LoadGame(std::string name, bool restart)
     FCEUI_SetNoiseVolume(m_Settings.soundnoisevolume);
     FCEUI_SetPCMVolume(m_Settings.soundpcmvolume);
 	
-	
+//-------------------------------------------------------------------------------------
+// Load rom
+//-------------------------------------------------------------------------------------	
 	if(FCEUI_LoadGame(name.c_str() ,0)!=NULL)
 	{
 		FCEUI_SetInput(0, SI_GAMEPAD, (void*)&powerpadbuf, 0);
@@ -704,7 +656,6 @@ void Cemulator::Render()
 //-------------------------------------------------------------------------------------
 // Clear screen
 //-------------------------------------------------------------------------------------	
-#ifdef _XBOX
 	g_pd3dDevice->SetRenderTarget( 0, m_pBackBuffer );
 	g_pd3dDevice->SetDepthStencilSurface( m_pDepthBuffer );
 
@@ -715,9 +666,6 @@ void Cemulator::Render()
 	//g_pd3dDevice->Clear( D3DCLEAR_TARGET1 | D3DCLEAR_TARGET2 );
 	g_pd3dDevice->Clear(0L, NULL, D3DCLEAR_ZBUFFER |D3DCLEAR_TARGET0| D3DCLEAR_TARGET,D3DCOLOR_XRGB(70,140,255), 1.0f, 0L);
 	g_pd3dDevice->SetPredication( 0 );
-#else
-	g_pd3dDevice->Clear( 0, NULL, D3DCLEAR_ZBUFFER |D3DCLEAR_TARGET,  D3DCOLOR_XRGB(70,140,255), 1.0f, 0 );
-#endif
 
 //-------------------------------------------------------------------------------------
 // Setup technique
@@ -796,16 +744,12 @@ void Cemulator::Render()
 // Affiche
 //-------------------------------------------------------------------------------------	
 	g_pd3dDevice->EndScene();
-#ifdef _XBOX
 	g_pd3dDevice->SetPredication( 0 );
 	g_pd3dDevice->EndTiling( 0, NULL, m_pFrontBuffer, NULL, 1, 0, NULL );
     
     // Present the backbuffer contents to the display
     g_pd3dDevice->SynchronizeToPresentationInterval();
 	g_pd3dDevice->Swap( m_pFrontBuffer, NULL );
-#else
-	g_pd3dDevice->Present( NULL, NULL, NULL, NULL );
-#endif
 };
 
 
@@ -836,9 +780,6 @@ HRESULT Cemulator::Run()
 		return E_FAIL;
 	}
 	
-
-	FCEUI_Initialize();
-
 	InitUi(g_pd3dDevice, g_d3dpp);
 
 //-------------------------------------------------------------------------------------
