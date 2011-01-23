@@ -89,16 +89,17 @@ VS_OUTPUT FullScreenVS( float4 vPos : POSITION,
                          float2 vTexCoord0 : TEXCOORD0 )
 {
     VS_OUTPUT Output;
-	Output.Diffuse    = 0;
-	
-	vPos.xy = sign(vPos.xy);  
+	Output.Diffuse = 0;
 
-	Output.Position = float4(vPos.xy, 0, 1);  
-	Output.Position.z = 0.0f;
+	vPos.xy = sign(vPos.xy);
+
+	Output.Position.xy = vPos.xy;
+	Output.Position.z = 1.0f;
+	Output.Position.w = 1.0f;
 	// Image-space  
-	Output.TextureUV.x = 0.5 * (1 + vPos.x);  
-	Output.TextureUV.y = 0.5 * (1 - vPos.y);  
-	
+	Output.TextureUV.x = 0.5f * (1 + vPos.x);  
+	Output.TextureUV.y = 0.5f * (1 - vPos.y);  
+
     return Output;    
 }
 
