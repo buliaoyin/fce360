@@ -400,7 +400,6 @@ HRESULT Cemulator::InitAudio()
 
 int snd_written = 0;
 
-
 void Cemulator::UpdateAudio(int * snd, int sndsize)
 {
 	if(sndsize==0)
@@ -440,11 +439,14 @@ void Cemulator::UpdateAudio(int * snd, int sndsize)
 		{
 			snd_written=0;
 
-			//Submit sound - fait une copie par secu
+			//-------------------------------------------------------------------------------------
+			// Submit sound - fait une copie par secu - free par la callback
+			//-------------------------------------------------------------------------------------	
 			unsigned int * nes_sound = (unsigned int *)malloc(sndsize * sizeof(int));
-			memcpy(nes_sound,g_sound_buffer,sndsize* sizeof(int));
+			XMemCpy(nes_sound,g_sound_buffer,sndsize* sizeof(int));
 			g_SoundBuffer.AudioBytes = sndsize * sizeof(int);	//size of the audio buffer in bytes
 			g_SoundBuffer.pAudioData = (BYTE*)nes_sound;//;		//buffer containing audio data
+			g_SoundBuffer.pContext = (BYTE*)nes_sound;
 			g_SoundBuffer.Flags = XAUDIO2_END_OF_STREAM;
 
 			//-------------------------------------------------------------------------------------
@@ -481,6 +483,20 @@ void Cemulator::UpdateInput()
 	for( DWORD dwUser = 0; dwUser < 2; dwUser++ )
 	{
 		if(!FCEUI_EmulationPaused()){
+		
+			if(Gamepads[dwUser].fY1 > 0.3f)
+				pad[dwUser] |= m_Settings.gamepad_dpad_up;
+
+			if(Gamepads[dwUser].fY1 < -0.3f)
+				pad[dwUser] |= m_Settings.gamepad_dpad_down;
+
+			if(Gamepads[dwUser].fX1 > 0.3f)
+				pad[dwUser] |= m_Settings.gamepad_dpad_right;
+
+			if(Gamepads[dwUser].fX1 < -0.3f)
+				pad[dwUser] |= m_Settings.gamepad_dpad_left;
+
+
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_DPAD_UP)
 				pad[dwUser] |= m_Settings.gamepad_dpad_up;
 
