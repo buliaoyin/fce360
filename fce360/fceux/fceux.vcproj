@@ -1975,6 +1975,22 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="net"
+				>
+				<File
+					RelativePath=".\xbox\net360.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\xbox\net360.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="md5"
+				>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="media"
