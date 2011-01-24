@@ -67,7 +67,7 @@ bool FCEUD_ShouldDrawInputAids()
 void FCEUD_VideoChanged()
 {
 }
-
+/*
 // Netplay
 int FCEUD_SendData(void *data, unsigned int len)
 {
@@ -82,9 +82,10 @@ int FCEUD_RecvData(void *data, unsigned int len)
 void FCEUD_NetworkClose(void)
 {
 }
-
+*/
 void FCEUD_NetplayText(unsigned char *text)
 {
+	printf("%s",text);
 }
 #undef DUMMY
 #define DUMMY(f) void f(void) { };

@@ -40,6 +40,9 @@ private:
 	int mWidth;
 	int mHeight;
 
+	//Sound
+	int snd_written;
+
 	void SetSystemWidth(int w)
 	{
 		mWidth=w;
@@ -91,6 +94,9 @@ public:
 		int soundnoisevolume;
 		int soundpcmvolume;
 		int soundq;
+
+		//Netplay
+		int use_netplay;
 		
 		//video
 		DWORD SelectedVertexFilter;

@@ -28,6 +28,15 @@ void ReadConfig()
 	fcecfg.Set("video","region","NTSC"); //not used
 	fcecfg.Set("video","swfilter", 1);
 	fcecfg.Set("video","screenaspect", 1);
+
+	/***
+	Network
+	**/
+	fcecfg.Set("network","port", 4096); //not used
+	fcecfg.Set("network","enable", 0);
+	fcecfg.Set("network","username", "xbox");
+	fcecfg.Set("network","key", "");
+	fcecfg.Set("network","server", "192.168.0.12");
 	
 	/***
 	Controller

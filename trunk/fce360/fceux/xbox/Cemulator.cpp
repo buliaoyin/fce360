@@ -12,6 +12,7 @@
 #include "input.h"
 #include "xconfig.h"
 #include "config_reader.h"
+#include "net360.h"
 
 //-----------------------------------------------------------------------------
 // Global variables
@@ -132,6 +133,8 @@ Cemulator::Cemulator(void)
 	end=false;
 	RenderEmulation = false;//Display xui at first
 	m_Settings.SelectedVertexFilter = FullScreen;
+	snd_written = 0;
+	ftime = 0.0f;
 }
 
 HRESULT Cemulator::InitVideo(){
@@ -398,36 +401,14 @@ HRESULT Cemulator::InitAudio()
 	return S_OK;
 };
 
-int snd_written = 0;
-
 void Cemulator::UpdateAudio(int * snd, int sndsize)
 {
 	if(sndsize==0)
 		return;
 
-	while( true ) 
-	{
-		XAUDIO2_VOICE_STATE VoiceState;
-		g_pSourceVoice->GetState(&VoiceState);
-		if(VoiceState.BuffersQueued < 4)
-		{
-			break;
-		}
-		else
-		{
-			break;
-			//WaitForSingleObject( XAudio2_Notifier.hBufferEndEvent, INFINITE );
-		}
-	}
-
 //-------------------------------------------------------------------------------------
 // Rebuild sound stream
 //-------------------------------------------------------------------------------------	
-	int submit_size = sndsize;
-
-	if(submit_size % 4)
-		submit_size =( ( sndsize / 4 ) + 1 ) * 4;
-
 	unsigned short sample;
 	unsigned int *dst = (unsigned int *)g_sound_buffer;
 	
@@ -482,8 +463,8 @@ void Cemulator::UpdateInput()
 
 	for( DWORD dwUser = 0; dwUser < 2; dwUser++ )
 	{
-		if(!FCEUI_EmulationPaused()){
-		
+		if(!FCEUI_EmulationPaused())
+		{
 			if(Gamepads[dwUser].fY1 > 0.3f)
 				pad[dwUser] |= m_Settings.gamepad_dpad_up;
 
@@ -495,7 +476,6 @@ void Cemulator::UpdateInput()
 
 			if(Gamepads[dwUser].fX1 < -0.3f)
 				pad[dwUser] |= m_Settings.gamepad_dpad_left;
-
 
 			if(Gamepads[dwUser].wLastButtons & XINPUT_GAMEPAD_DPAD_UP)
 				pad[dwUser] |= m_Settings.gamepad_dpad_up;
@@ -587,6 +567,9 @@ HRESULT Cemulator::InitSystem()
 	fcecfg.Find("video","swfilter", m_Settings.SelectedGfxFilter);
 	fcecfg.Find("video","screenaspect", m_Settings.SelectedVertexFilter);
 	
+	//network
+	fcecfg.Find("network","enable", m_Settings.use_netplay);
+
 	fcecfg.Find("controller","XINPUT_GAMEPAD_DPAD_UP", m_Settings.gamepad_dpad_up );
 	fcecfg.Find("controller","XINPUT_GAMEPAD_DPAD_DOWN", m_Settings.gamepad_dpad_down );
 	fcecfg.Find("controller","XINPUT_GAMEPAD_DPAD_LEFT", m_Settings.gamepad_dpad_left );
@@ -603,13 +586,6 @@ HRESULT Cemulator::InitSystem()
 	fcecfg.Find("controller","XINPUT_GAMEPAD_RIGHT_SHOULDER", m_Settings.gamepad_right_shoulder);
 	fcecfg.Find("controller","XINPUT_LEFT_TRIGGER", m_Settings.gamepad_left_trigger);
 	fcecfg.Find("controller","XINPUT_RIGHT_TRIGGER", m_Settings.gamepad_right_trigger);
-	
-//-------------------------------------------------------------------------------------
-// Load roms
-//-------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------
-// Start system
-//-------------------------------------------------------------------------------------
 
 	return S_OK;
 };
@@ -650,10 +626,11 @@ HRESULT Cemulator::LoadGame(std::string name, bool restart)
 		extern FCEUGI * GameInfo;
 		GameInfo->vidsys=GIV_NTSC;
 
-		//InitSound();
-
 		if(restart)
 			ResetNES();
+
+		if(m_Settings.use_netplay)
+			FCEUD_NetworkConnect();
 
 		return S_OK;
 	}
@@ -686,9 +663,11 @@ void Cemulator::Render()
 //-------------------------------------------------------------------------------------
 // Setup technique
 //-------------------------------------------------------------------------------------	
+	ftime+=0.1f;
+
 	g_pTexelSize[0]=1.f/float(GetWidth());
 	g_pTexelSize[1]=1.f/float(GetHeight());
-	ftime+=0.1f;
+	
 	g_effect->SetValue( g_MaterialAmbientColor, &colorMtrlAmbient, sizeof( D3DXCOLOR ) );
     g_effect->SetValue( g_MaterialDiffuseColor, &colorMtrlDiffuse, sizeof( D3DXCOLOR ) );
 	g_effect->SetValue ( g_fTime, &ftime, sizeof(float));
